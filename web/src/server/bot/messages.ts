@@ -4,6 +4,7 @@
  * Bot copy: polite register ending in "ครับ" (CLAUDE.md).
  */
 import { config } from '@/server/lib/config';
+import { botText } from './bot-texts';
 import type { FlexBubble, FlexComponent, LineAction, LineMessage, LineSender, QuickReply } from './line-types';
 
 // Colours from prototype/tokens.css (LINE needs literal hex values).
@@ -94,7 +95,7 @@ const iconUrl = (icon: string, fg: string) => `${config.baseUrl()}/api/flex-icon
 
 export function welcome(oaName: string, registerUrl: string, displayName?: string | null): LineMessage[] {
   return [
-    text(`สวัสดีครับ${displayName ? ` คุณ${displayName}` : ''} ยินดีต้อนรับสู่${oaName}`),
+    text(botText('welcome', { name: displayName ? ` คุณ${displayName}` : '', oa: oaName })),
     registerCard('ลงทะเบียนก่อนแจ้งปัญหา', 'กรอกชื่อ เบอร์โทร และรหัสลูกค้าเพียงครั้งเดียว พร้อมอ่านประกาศความเป็นส่วนตัวครับ', registerUrl),
   ];
 }
@@ -116,7 +117,7 @@ function registerCard(title: string, body: string, url: string): LineMessage {
 }
 
 export const registered = (name: string): LineMessage[] => [
-  text(`ลงทะเบียนเรียบร้อยแล้วครับ คุณ${name}\nกด "แจ้งปัญหาใหม่" ที่เมนูด้านล่างเพื่อเริ่มแจ้งเรื่องได้เลยครับ`, menuActions()),
+  text(botText('registered', { name }), menuActions()),
 ];
 
 // ── Categories (Main.png) ─────────────────────────────────────
@@ -141,7 +142,7 @@ export function categoryCarousel(greetingName: string | null, parents: CategoryC
     };
   });
   return [
-    text(`สวัสดีครับ${greetingName ? ` คุณ${greetingName}` : ''} เลือกหัวข้อที่ต้องการแจ้งได้เลยครับ`),
+    text(botText('greeting', { name: greetingName ? ` คุณ${greetingName}` : '' })),
     { type: 'flex', altText: 'เลือกหมวดหมู่ที่ต้องการแจ้ง', contents: { type: 'carousel', contents: bubbles }, quickReply: quickReply([pb(CMD.cancel, 'cmd:cancel')]) },
   ];
 }
@@ -246,7 +247,7 @@ export interface CaseCard {
 const MY_CASES_MAX = 10;
 
 export function myCases(cards: CaseCard[]): LineMessage[] {
-  if (!cards.length) return [text('ตอนนี้ไม่มีเคสที่ยังเปิดอยู่ครับ', menuActions())];
+  if (!cards.length) return [text(botText('no_open_cases'), menuActions())];
   const shown = cards.slice(0, MY_CASES_MAX);
   const items: FlexComponent[] = shown.map((c) => vbox([
     hbox([t(c.caseNo, { size: 'md', wrap: false, flex: 1, gravity: 'center' }), chip(c.statusLabel, c.statusTone)], { alignItems: 'center' }),

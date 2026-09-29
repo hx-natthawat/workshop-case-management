@@ -15,7 +15,7 @@ export default async function UsersPage() {
       <div className={pageBody}>
         <UsersClient
           meId={me.id}
-          users={users.map((u) => ({ ...u, lastAssignedAt: u.lastAssignedAt?.toISOString() ?? null, createdAt: u.createdAt.toISOString() }))}
+          users={users.map((u) => ({ ...u, lastAssignedAt: u.lastAssignedAt?.toISOString() ?? null, mfaEnabledAt: u.mfaEnabledAt?.toISOString() ?? null, createdAt: u.createdAt.toISOString() }))}
           teams={teams}
         />
       </div>

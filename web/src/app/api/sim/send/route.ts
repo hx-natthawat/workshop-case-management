@@ -1,13 +1,13 @@
+import { and, eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { db, schema } from '@/server/db';
 import { HttpError } from '@/server/lib/auth';
 import { handle } from '@/server/lib/http';
+import { checkMedia, kindOfUpload, MAX_MEDIA_LABEL, MEDIA_ERROR_TEXT } from '@/server/lib/media';
 import { putObject } from '@/server/lib/storage';
 import { defaultTenant } from '@/server/lib/tenant';
 import { dispatch, recordUserAction, requireSimulator, requireSimUserId } from '../sim-lib';
-
-const MAX_IMAGE = 10 * 1024 * 1024;
 
 const eventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('text'), text: z.string().trim().min(1).max(5000) }),
@@ -40,15 +40,28 @@ export const POST = handle(async (req: Request) => {
     const form = await req.formData();
     const userId = requireSimUserId(form.get('userId'));
     const file = form.get('file');
-    if (!(file instanceof File)) throw new HttpError(400, 'กรุณาเลือกไฟล์รูปภาพ');
-    if (!file.type.startsWith('image/')) throw new HttpError(400, 'รองรับเฉพาะไฟล์รูปภาพครับ');
-    if (file.size > MAX_IMAGE) throw new HttpError(413, 'ไฟล์ใหญ่เกิน 10 MB');
-    const obj = await putObject(Buffer.from(await file.arrayBuffer()), file.type);
+    if (!(file instanceof File)) throw new HttpError(400, 'กรุณาเลือกไฟล์');
+    // Same kinds and limits as LINE media (D-015). Images/video/audio by MIME; anything else is a file message.
+    const kind = kindOfUpload(file.type);
+    const name = file.name.slice(0, 255) || null;
+    const check = checkMedia(kind, file.type || 'application/octet-stream', file.size, name);
+    if (!check.ok) throw new HttpError(check.reason === 'size' ? 413 : 400, check.reason === 'size' ? `ไฟล์ใหญ่เกิน ${MAX_MEDIA_LABEL}` : `${MEDIA_ERROR_TEXT.type}ครับ`);
+    const [owner] = await db.select({ id: schema.contact.id, consentAt: schema.contact.consentAt }).from(schema.contact)
+      .where(and(eq(schema.contact.tenantId, tenant.id), eq(schema.contact.lineUserId, userId)));
+    // Same rule as real LINE: no uploads before registration (#22 finding 2)
+    if (!owner?.consentAt) throw new HttpError(403, 'กรุณาลงทะเบียนก่อนส่งไฟล์');
+    const obj = await putObject(Buffer.from(await file.arrayBuffer()), check.mimeType);
     const [att] = await db.insert(schema.attachment).values({
-      tenantId: tenant.id, storageKey: obj.key, mimeType: file.type, size: obj.size, checksum: obj.checksum,
+      tenantId: tenant.id, contactId: owner.id, storageKey: obj.key, mimeType: check.mimeType, fileName: kind === 'file' ? name : null, size: obj.size, checksum: obj.checksum,
     }).returning();
-    await recordUserAction(tenant.id, userId, { type: 'image', attachmentId: att.id });
-    await dispatch(userId, { type: 'message', message: { type: 'image', id: `simatt:${att.id}`, contentProvider: { type: 'line' } } });
+    await recordUserAction(tenant.id, userId, { type: kind, attachmentId: att.id, ...(kind === 'file' ? { fileName: name, fileSize: obj.size } : {}) });
+    const id = `simatt:${att.id}`;
+    await dispatch(userId, {
+      type: 'message',
+      message: kind === 'file'
+        ? { type: 'file', id, fileName: name ?? 'file', fileSize: obj.size }
+        : { type: kind, id, contentProvider: { type: 'line' } },
+    });
     return { ok: true };
   }
 

@@ -7,6 +7,7 @@ import type { CaseStatus, MessageContent, Priority } from '@/server/db/schema';
 import type { CaseDraft, DraftAnswer } from '@/server/bot/dialog';
 import type { LineMessage } from '@/server/bot/line-types';
 import { agentReply, resolvedCard, text } from '@/server/bot/messages';
+import { botText, loadBotTexts } from '@/server/bot/bot-texts';
 import { push } from '@/server/messaging/gateway';
 import { audit } from '@/server/lib/audit';
 import { HttpError, type Role, type SessionUser } from '@/server/lib/auth';
@@ -226,6 +227,7 @@ interface TransitionOpts {
 export async function transition(tenantId: string, caseId: string, to: CaseStatus, actor: Actor, opts: TransitionOpts = {}) {
   const now = opts.now ?? new Date();
   await getCase(tenantId, caseId); // validates the id before the row lock
+  await loadBotTexts(tenantId);
   const result = await db.transaction(async (tx) => {
     const [c] = await tx.select().from(schema.kase).where(and(eq(schema.kase.id, caseId), eq(schema.kase.tenantId, tenantId))).for('update');
     if (!c) throw new HttpError(404, 'ไม่พบเคส');
@@ -258,7 +260,7 @@ export async function transition(tenantId: string, caseId: string, to: CaseStatu
       tenantId, caseId: c.id, eventType: 'status_changed', fromValue: c.status, toValue: to,
       actorType: actorType(actor), actorId: actorId(actor), note: opts.reason ?? null, createdAt: now,
     });
-    await audit({ tenantId, actorId: actorId(actor), actorType: actorType(actor), action: 'case.status_changed', entity: 'case', entityId: c.id, diff: { status: [c.status, to], reason: opts.reason } }, tx);
+    await audit({ tenantId, actorId: actorId(actor), actorType: actorType(actor), action: 'case.status_changed', entity: 'case', entityId: c.id, diff: { status: [c.status, to], reasonLength: opts.reason?.length ?? 0 } }, tx); // no free text in audit: it may quote the reporter (#22 finding 4)
 
     if (to === 'reopened' || (to === 'in_progress' && actor.type === 'contact')) {
       await notify(tenantId, [c.assigneeId], to === 'reopened' ? 'case_reopened' : 'customer_replied', c.id, `${c.caseNo}: ${to === 'reopened' ? 'ผู้แจ้งแจ้งว่ายังไม่เรียบร้อย เปิดเคสใหม่' : 'ผู้แจ้งตอบกลับแล้ว'}`, tx);
@@ -278,13 +280,13 @@ function reporterMessagesFor(before: CaseRow, after: CaseRow, actor: Actor, opts
     case 'in_progress':
       return before.status === 'assigned' || before.status === 'reopened' ? [text(`เจ้าหน้าที่เริ่มดำเนินการเคส ${no} แล้วครับ`)] : [];
     case 'pending_customer':
-      return opts.withAgentMessage ? [] : [text(`เจ้าหน้าที่ขอข้อมูลเพิ่มเติมสำหรับเคส ${no} ครับ พิมพ์หรือส่งรูปตอบในแชทนี้ได้เลยครับ`)];
+      return opts.withAgentMessage ? [] : [text(botText('pending_request', { caseNo: no }))];
     case 'resolved':
       return [resolvedCard(after.id, no)];
     case 'closed':
       if (actor.type === 'contact') return [];
       return actor.type === 'system'
-        ? [text(`เคส ${no} ปิดอัตโนมัติแล้วครับ หากยังพบปัญหา แจ้งเคสใหม่ได้ที่เมนู "แจ้งปัญหาใหม่"`)]
+        ? [text(botText('auto_closed', { caseNo: no }))]
         : [text(`เคส ${no} ปิดเรียบร้อยแล้วครับ ขอบคุณที่ใช้บริการ`)];
     case 'cancelled':
       return [text(`เคส ${no} ถูกยกเลิกครับ${opts.reason ? `\nเหตุผล: ${opts.reason}` : ''}`)];
@@ -342,7 +344,7 @@ export async function changePriority(tenantId: string, caseId: string, priority:
       slaWarnedResponse: false, slaWarnedResolve: false, slaBreachedResponse: false, slaBreachedResolve: false, updatedAt: now,
     }).where(eq(schema.kase.id, c.id));
     await tx.insert(schema.caseEvent).values({ tenantId, caseId: c.id, eventType: 'priority_changed', fromValue: c.priority, toValue: priority, actorType: 'user', actorId: actor.user.id, note: reason, createdAt: now });
-    await audit({ tenantId, actorId: actor.user.id, action: 'case.priority_changed', entity: 'case', entityId: c.id, diff: { priority: [c.priority, priority], reason } }, tx);
+    await audit({ tenantId, actorId: actor.user.id, action: 'case.priority_changed', entity: 'case', entityId: c.id, diff: { priority: [c.priority, priority], reasonLength: reason.length } }, tx);
   });
 }
 
@@ -394,13 +396,25 @@ export async function postAgentMessage(
 
 /** Reporter message bound to a case (SPEC §3 "ติดตามและโต้ตอบหลังเปิดเคส"). */
 export async function addInbound(tenantId: string, c: CaseRow, contact: ContactRow, content: MessageContent, lineMessageId: string | null, now = new Date()) {
-  await db.insert(schema.caseMessage).values({ tenantId, caseId: c.id, direction: 'in', senderType: 'contact', senderId: contact.id, content, lineMessageId, createdAt: now });
+  const [msg] = await db.insert(schema.caseMessage).values({ tenantId, caseId: c.id, direction: 'in', senderType: 'contact', senderId: contact.id, content, lineMessageId, createdAt: now }).returning({ id: schema.caseMessage.id });
+  if ('attachmentId' in content) {
+    // Link follow-up media to its case so it is served, exported and erased with the case.
+    await db.update(schema.attachment).set({ caseId: c.id, messageId: msg.id })
+      .where(and(eq(schema.attachment.tenantId, tenantId), eq(schema.attachment.id, content.attachmentId), isNull(schema.attachment.caseId)));
+  }
   await db.update(schema.kase).set({ lastInboundAt: now, unreadByAgent: true, updatedAt: now }).where(eq(schema.kase.id, c.id));
   if (c.status === 'pending_customer') {
     await transition(tenantId, c.id, 'in_progress', { type: 'contact', contactId: contact.id }, { now });
   } else {
     await notify(tenantId, [c.assigneeId], 'customer_replied', c.id, `${c.caseNo}: ผู้แจ้งส่งข้อความใหม่`);
   }
+}
+
+/** Reporter media we could not download (transcoding timeout, size, type): a timeline note, not a message (D-015). */
+export async function recordMediaFailure(tenantId: string, c: CaseRow, contact: ContactRow, note: string, now = new Date()) {
+  await db.insert(schema.caseEvent).values({ tenantId, caseId: c.id, eventType: 'media_failed', actorType: 'contact', actorId: contact.id, note, createdAt: now });
+  await db.update(schema.kase).set({ unreadByAgent: true, updatedAt: now }).where(eq(schema.kase.id, c.id));
+  await notify(tenantId, [c.assigneeId], 'customer_replied', c.id, `${c.caseNo}: ${note}`);
 }
 
 export async function openCasesOf(tenantId: string, contactId: string) {

@@ -9,7 +9,7 @@ import { PRIORITY } from '@/server/lib/enums';
 
 interface Sla { priority: Priority; responseMinutes: number; resolveMinutes: number; businessHoursOnly: boolean }
 interface Settings {
-  tenant: { oaName: string; bizStartMin: number; bizEndMin: number; pdpaText: string; pdpaVersion: string; slaTargetPct: number };
+  tenant: { oaName: string; bizStartMin: number; bizEndMin: number; pdpaText: string; pdpaVersion: string; slaTargetPct: number; retentionDays: number | null };
   sla: Sla[];
 }
 
@@ -31,6 +31,8 @@ export function SettingsForm({ initial }: { initial: Settings }) {
   const [pdpaVersion, setPdpaVersion] = useState(t0.pdpaVersion);
   const [sla, setSla] = useState<Sla[]>(initial.sla);
   const [target, setTarget] = useState(t0.slaTargetPct);
+  const [retentionOn, setRetentionOn] = useState(t0.retentionDays !== null);
+  const [retention, setRetention] = useState(t0.retentionDays ?? 365);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -38,12 +40,14 @@ export function SettingsForm({ initial }: { initial: Settings }) {
   const versionChanged = pdpaVersion.trim() !== t0.pdpaVersion;
   const pdpaError = textChanged && !versionChanged ? 'แก้ไขข้อความแล้ว กรุณาเปลี่ยนเลข version ด้วย' : null;
   const hoursError = start && end && toMin(end) <= toMin(start) ? 'เวลาสิ้นสุดต้องหลังเวลาเริ่ม' : null;
+  const retentionValue = retentionOn ? retention : null;
+  const retentionError = retentionOn && !(Number.isInteger(retention) && retention >= 30 && retention <= 3650) ? 'กรุณาระบุจำนวนวันระหว่าง 30–3650' : null;
 
   const setRow = (p: Priority, patch: Partial<Sla>) => setSla((rows) => rows.map((r) => (r.priority === p ? { ...r, ...patch } : r)));
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (pdpaError || hoursError) return;
+    if (pdpaError || hoursError || retentionError) return;
     if (sla.some((r) => !(r.responseMinutes >= 1 && r.resolveMinutes >= 1))) return setMsg({ ok: false, text: 'เวลา SLA ต้องมากกว่า 0 นาที' });
     const body: Record<string, unknown> = {};
     if (oaName.trim() !== t0.oaName) body.oaName = oaName.trim();
@@ -52,12 +56,14 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     if (textChanged) body.pdpaText = pdpaText.trim();
     if (versionChanged) body.pdpaVersion = pdpaVersion.trim();
     if (target !== t0.slaTargetPct) body.slaTargetPct = target;
+    if (retentionValue !== t0.retentionDays) body.retentionDays = retentionValue;
     const changedSla = sla.filter((r) => {
       const o = initial.sla.find((x) => x.priority === r.priority);
       return !o || o.responseMinutes !== r.responseMinutes || o.resolveMinutes !== r.resolveMinutes || o.businessHoursOnly !== r.businessHoursOnly;
     });
     if (changedSla.length) body.sla = changedSla;
     if (!Object.keys(body).length) return setMsg({ ok: true, text: 'ไม่มีการเปลี่ยนแปลง' });
+    if (retentionValue !== null && retentionValue !== t0.retentionDays && !confirm(`ระบบจะลบข้อมูลส่วนบุคคลของเคสที่ปิดหรือยกเลิกเกิน ${retentionValue} วันโดยอัตโนมัติ และกู้คืนไม่ได้ ยืนยันการบันทึกหรือไม่`)) return;
     if (versionChanged && !confirm(`ผู้ที่ลงทะเบียนหลังจากนี้จะถูกบันทึกว่ารับทราบประกาศ PDPA version "${pdpaVersion.trim()}" ยืนยันการบันทึกหรือไม่`)) return;
     setBusy(true);
     setMsg(null);
@@ -90,6 +96,27 @@ export function SettingsForm({ initial }: { initial: Settings }) {
               ผู้ที่ลงทะเบียนใหม่หลังบันทึกจะถูกบันทึกว่ารับทราบประกาศ version ใหม่ ผู้ที่ลงทะเบียนไว้แล้วยังคงบันทึก version เดิม
             </p>
           )}
+        </div>
+      </Card>
+
+      <Card title="ระยะเวลาเก็บรักษาข้อมูล (PDPA)">
+        <div className="space-y-4 px-5 py-4">
+          <label className="flex items-center gap-2 text-[14px]">
+            <input type="checkbox" className="size-4 accent-accent" checked={retentionOn} onChange={(e) => setRetentionOn(e.target.checked)} />
+            ลบข้อมูลส่วนบุคคลอัตโนมัติเมื่อครบกำหนด
+          </label>
+          {retentionOn && (
+            <div className="max-w-[240px]">
+              <Field label="เก็บไว้หลังปิดเคส (วัน)" htmlFor="s-retention" error={retentionError} hint="30–3650 วัน">
+                <Input id="s-retention" type="number" min={30} max={3650} className="tabular" value={retention} onChange={(e) => setRetention(Number(e.target.value))} required />
+              </Field>
+            </div>
+          )}
+          <p className="text-[12px] text-muted">
+            {retentionOn
+              ? 'เมื่อเคสปิดหรือยกเลิกครบตามจำนวนวันที่กำหนด ระบบจะลบคำตอบ ข้อความ และไฟล์แนบ และลบข้อมูลผู้แจ้งเมื่อไม่มีเคสที่อยู่ในระยะเก็บรักษาแล้ว ข้อมูลสถิติของเคสยังคงอยู่สำหรับรายงาน'
+              : 'ปิดอยู่ ระบบจะไม่ลบข้อมูลอัตโนมัติ ระยะเวลาเก็บรักษาต้องตรงกับที่ระบุในประกาศความเป็นส่วนตัว (มาตรา 23)'}
+          </p>
         </div>
       </Card>
 
@@ -142,7 +169,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
 
       <div className="flex items-center justify-end gap-3">
         {msg && <span role="status" className={msg.ok ? 'text-[13px] text-success' : 'text-[13px] text-critical'}>{msg.text}</span>}
-        <Button type="submit" variant="primary" disabled={busy || !!pdpaError || !!hoursError}>{busy ? 'กำลังบันทึก…' : 'บันทึกการตั้งค่า'}</Button>
+        <Button type="submit" variant="primary" disabled={busy || !!pdpaError || !!hoursError || !!retentionError}>{busy ? 'กำลังบันทึก…' : 'บันทึกการตั้งค่า'}</Button>
       </div>
     </form>
   );

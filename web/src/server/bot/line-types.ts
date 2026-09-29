@@ -86,7 +86,8 @@ export interface LineEvent {
   source: { type: 'user' | 'group' | 'room'; userId?: string };
   message?:
     | { type: 'text'; id: string; text: string }
-    | { type: 'image'; id: string; contentProvider?: { type: 'line' | 'external'; originalContentUrl?: string } }
+    | { type: 'image' | 'video' | 'audio'; id: string; duration?: number; contentProvider?: { type: 'line' | 'external'; originalContentUrl?: string } }
+    | { type: 'file'; id: string; fileName: string; fileSize: number }
     | { type: 'location'; id: string; title?: string; address?: string; latitude: number; longitude: number }
     | { type: string; id: string };
   postback?: { data: string; params?: { datetime?: string; date?: string; time?: string } };

@@ -3,9 +3,10 @@
 import clsx from 'clsx';
 import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
-  Calendar, Camera, ChevronLeft, Image as ImageIcon, Inbox, Keyboard, MapPin, Menu, MessageSquare, Plus, RotateCcw, Search, SendHorizontal, X,
+  Calendar, Camera, ChevronLeft, FileText, Image as ImageIcon, Inbox, Keyboard, MapPin, Menu, MessageSquare, Plus, RotateCcw, Search, SendHorizontal, X,
 } from 'lucide-react';
 import type { LineAction, LineMessage } from '@/server/bot/line-types';
+import { formatBytes, kindOfUpload, KIND_LABEL, MAX_MEDIA_BYTES, MAX_MEDIA_LABEL, UPLOAD_ACCEPT } from '@/server/lib/media';
 import { FlexContents } from './flex';
 import type { Persona } from './simulator';
 
@@ -13,6 +14,9 @@ type UserPayload =
   | { type: 'text'; text: string }
   | { type: 'postback'; displayText: string }
   | { type: 'image'; attachmentId: string; url?: string }
+  | { type: 'video'; attachmentId: string; url?: string }
+  | { type: 'audio'; attachmentId: string; url?: string }
+  | { type: 'file'; attachmentId: string; url?: string; fileName?: string; fileSize?: number }
   | { type: 'location'; title: string; address?: string }
   | { type: 'follow' }
   | { type: 'unfollow' };
@@ -203,12 +207,12 @@ export function Phone({ persona, oaName, onChanged }: { persona: Persona; oaName
     const f = e.target.files?.[0];
     e.target.value = '';
     if (!f) return;
-    if (!f.type.startsWith('image/')) return setError('รองรับเฉพาะไฟล์รูปภาพ');
-    if (f.size > 10 * 1024 * 1024) return setError('ไฟล์ใหญ่เกิน 10 MB');
+    if (f.size > MAX_MEDIA_BYTES) return setError(`ไฟล์ใหญ่เกิน ${MAX_MEDIA_LABEL}`);
     const fd = new FormData();
     fd.set('userId', userId);
     fd.set('file', f);
-    void send(fd, '📷 รูปภาพ');
+    const kind = kindOfUpload(f.type);
+    void send(fd, kind === 'file' ? `📎 ${f.name}` : kind === 'image' ? '📷 รูปภาพ' : `${kind === 'video' ? '🎬' : '🎤'} ${KIND_LABEL[kind]}`);
   }
 
   function resetView() {
@@ -336,13 +340,13 @@ export function Phone({ persona, oaName, onChanged }: { persona: Persona; oaName
                 <SendHorizontal className="size-5" />
               </button>
             ) : (
-              <button type="button" onClick={() => fileRef.current?.click()} aria-label="ส่งรูปภาพ" className="inline-flex size-11 items-center justify-center rounded-full text-text-2 hover:bg-hover">
+              <button type="button" onClick={() => fileRef.current?.click()} aria-label="ส่งรูป วิดีโอ เสียง หรือไฟล์" title="ส่งรูป วิดีโอ เสียง หรือไฟล์" className="inline-flex size-11 items-center justify-center rounded-full text-text-2 hover:bg-hover">
                 <ImageIcon className="size-5" />
               </button>
             )}
           </form>
         )}
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} aria-hidden tabIndex={-1} />
+        <input ref={fileRef} type="file" accept={UPLOAD_ACCEPT} className="hidden" onChange={onFile} aria-hidden tabIndex={-1} />
 
         {/* Sheets inside the phone */}
         {sheet?.kind === 'register' && (
@@ -474,6 +478,22 @@ function UserRow({ payload, time, sending }: { payload: UserPayload; time: strin
           // eslint-disable-next-line @next/next/no-img-element
           ? <img src={payload.url} alt="รูปที่ส่ง" className="max-h-60 max-w-[200px] rounded-[14px] object-cover" />
           : <p className="rounded-[16px] bg-line-user px-3.5 py-2.5 text-[15px]">รูปภาพ</p>
+      ) : payload.type === 'video' ? (
+        payload.url
+          ? <video src={payload.url} controls preload="metadata" aria-label="วิดีโอที่ส่ง" className="max-h-60 max-w-[220px] rounded-[14px] bg-black" />
+          : <p className="rounded-[16px] bg-line-user px-3.5 py-2.5 text-[15px]">วิดีโอ</p>
+      ) : payload.type === 'audio' ? (
+        payload.url
+          ? <audio src={payload.url} controls preload="metadata" aria-label="คลิปเสียงที่ส่ง" className="w-[230px]" />
+          : <p className="rounded-[16px] bg-line-user px-3.5 py-2.5 text-[15px]">คลิปเสียง</p>
+      ) : payload.type === 'file' ? (
+        <a href={payload.url} download={payload.fileName} className="flex max-w-[240px] items-center gap-2.5 rounded-[16px] bg-white px-3.5 py-2.5">
+          <FileText aria-hidden className="size-7 shrink-0 text-accent" />
+          <span className="min-w-0">
+            <span className="block truncate text-[14px] font-medium">{payload.fileName ?? 'ไฟล์'}</span>
+            {payload.fileSize != null && <span className="block text-[11.5px] text-muted">{formatBytes(payload.fileSize)}</span>}
+          </span>
+        </a>
       ) : payload.type === 'location' ? (
         <div className="max-w-[240px] overflow-hidden rounded-[16px] bg-white">
           <div className="flex h-20 items-center justify-center bg-[#E8EEF1]"><MapPin aria-hidden className="size-7 text-critical" /></div>

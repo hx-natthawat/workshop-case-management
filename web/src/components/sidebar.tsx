@@ -81,10 +81,10 @@ export function Sidebar({ user, teamName, counts, simulator }: {
       </nav>
       <div className="mx-3 flex items-center gap-2 border-t border-border px-2 py-4">
         <Avatar name={user.name} />
-        <div className="min-w-0 flex-1 leading-tight">
+        <Link href="/account/security" className="min-w-0 flex-1 leading-tight hover:underline" title="ความปลอดภัยของบัญชี">
           <div className="truncate text-[14px] font-semibold">{user.name}</div>
           <div className="truncate text-[12px] text-muted">{ROLE_LABEL[user.role]}{teamName ? ` · ${teamName}` : ''}</div>
-        </div>
+        </Link>
         <Link href="/notifications" className="relative rounded-md p-2 text-muted hover:bg-hover" aria-label={`การแจ้งเตือน${counts.notif ? ` ${counts.notif} รายการใหม่` : ''}`} title="การแจ้งเตือน">
           <Bell size={16} />
           {counts.notif > 0 && <span className="absolute right-1 top-1 size-2 rounded-full bg-critical" aria-hidden />}

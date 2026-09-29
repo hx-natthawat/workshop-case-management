@@ -20,6 +20,8 @@ export const tenant = pgTable('tenant', {
   handoffCategoryId: uuid('handoff_category_id'),
   /** Dashboard target for the 30-day SLA pass rate (D-013; default from the prototype, not from a standard). */
   slaTargetPct: integer('sla_target_pct').notNull().default(90),
+  /** PDPA retention (#19): closed/cancelled cases older than this are anonymised. Null = off. */
+  retentionDays: integer('retention_days'),
   createdAt: createdAt(),
 });
 
@@ -42,6 +44,12 @@ export const user = pgTable('app_user', {
   ssoSubject: text('sso_subject'),
   isActive: boolean('is_active').notNull().default(true),
   lastAssignedAt: ts('last_assigned_at'),
+  // MFA (ADR 0006): secrets encrypted at rest, recovery codes as SHA-256 hashes
+  mfaSecretEnc: text('mfa_secret_enc'),
+  mfaPendingEnc: text('mfa_pending_enc'),
+  mfaEnabledAt: ts('mfa_enabled_at'),
+  mfaRecoveryHashes: jsonb('mfa_recovery_hashes').$type<string[]>(),
+  mfaLastStep: bigint('mfa_last_step', { mode: 'number' }),
   createdAt: createdAt(),
 }, (t) => [uniqueIndex('app_user_email_uq').on(t.tenantId, t.email)]);
 
@@ -58,6 +66,10 @@ export const contact = pgTable('contact', {
   consentAt: ts('consent_at'),
   status: text('status').$type<'active' | 'unfollowed' | 'blocked'>().notNull().default('active'),
   isSimulated: boolean('is_simulated').notNull().default(false),
+  /** PDPA s.34 restriction of processing (#19): set together with status = 'blocked'. */
+  restrictedAt: ts('restricted_at'),
+  /** Set when personal data was erased (DSR erase or retention, #19). */
+  anonymisedAt: ts('anonymised_at'),
   createdAt: createdAt(),
 }, (t) => [uniqueIndex('contact_line_uq').on(t.tenantId, t.lineUserId)]);
 
@@ -172,6 +184,8 @@ export const kase = pgTable('case', {
   unreadByAgent: boolean('unread_by_agent').notNull().default(true),
   csatScore: integer('csat_score'),
   reopenCount: integer('reopen_count').notNull().default(0),
+  /** Set when answers, messages and files were anonymised (DSR erase or retention, #19). */
+  anonymisedAt: ts('anonymised_at'),
   createdAt: createdAt(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
@@ -185,8 +199,12 @@ export type AnswerValue =
   | { kind: 'choice'; value: string }
   | { kind: 'datetime'; iso: string }
   | { kind: 'location'; title?: string; address?: string; latitude?: number; longitude?: number }
-  | { kind: 'files'; attachmentIds: string[] }
+  /** `kinds` runs parallel to `attachmentIds` (D-015); rows without it are all images. */
+  | { kind: 'files'; attachmentIds: string[]; kinds?: MediaKind[] }
   | { kind: 'skipped' };
+
+/** Inbound media a reporter can send (LINE image/video/audio/file messages, D-015). */
+export type MediaKind = 'image' | 'video' | 'audio' | 'file';
 
 export const caseAnswer = pgTable('case_answer', {
   id: id(),
@@ -201,6 +219,7 @@ export const caseAnswer = pgTable('case_answer', {
 export type MessageContent =
   | { type: 'text'; text: string }
   | { type: 'image'; attachmentId: string }
+  | { type: 'video' | 'audio' | 'file'; attachmentId: string }
   | { type: 'location'; title?: string; address?: string; latitude: number; longitude: number }
   | { type: 'form_submitted'; answerCount: number; attachmentCount: number };
 
@@ -222,8 +241,12 @@ export const attachment = pgTable('attachment', {
   tenantId: tenantId(),
   caseId: uuid('case_id'),
   messageId: uuid('message_id'),
+  /** Uploader, so erase/retention can find files not yet linked to a case (#22 finding 2). */
+  contactId: uuid('contact_id'),
   storageKey: text('storage_key').notNull(),
   mimeType: text('mime_type').notNull(),
+  /** Original name for file messages (LINE `fileName`); null for camera media. */
+  fileName: text('file_name'),
   size: integer('size').notNull(),
   checksum: text('checksum').notNull(),
   createdAt: createdAt(),
@@ -288,7 +311,46 @@ export const dialogSession = pgTable('dialog_session', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.tenantId, t.lineUserId] })]);
 
+export type DsrType = 'access' | 'rectify' | 'erase' | 'restrict' | 'object' | 'portability';
+export type DsrStatus = 'open' | 'completed' | 'rejected';
+
+/** PDPA data-subject request log (#19, SPEC §8). due_at = received_at + 30 days (s.30). */
+export const dsrRequest = pgTable('dsr_request', {
+  id: id(),
+  tenantId: tenantId(),
+  contactId: uuid('contact_id').notNull(),
+  type: text('type').$type<DsrType>().notNull(),
+  receivedAt: timestamp('received_at', { withTimezone: true }).notNull(),
+  dueAt: timestamp('due_at', { withTimezone: true }).notNull(),
+  status: text('status').$type<DsrStatus>().notNull().default('open'),
+  createdBy: uuid('created_by'),
+  handledBy: uuid('handled_by'),
+  handledAt: ts('handled_at'),
+  note: text('note'),
+  createdAt: createdAt(),
+}, (t) => [index('dsr_request_contact_idx').on(t.tenantId, t.contactId)]);
+
 /** Simulator chat log: both what the tester sent and what the bot pushed/replied. */
+/** Admin/supervisor overrides of the bot's auto-reply texts (SPEC §5 Message Templates, G6). */
+export const botText = pgTable('bot_text', {
+  tenantId: tenantId(),
+  key: text('key').notNull(),
+  body: text('body').notNull(),
+  updatedBy: uuid('updated_by'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.tenantId, t.key] })]);
+
+/** Outage announcements sent to all registered reporters (SPEC §5 Message Templates, G6). */
+export const broadcast = pgTable('broadcast', {
+  id: id(),
+  tenantId: tenantId(),
+  text: text('text').notNull(),
+  recipientCount: integer('recipient_count').notNull(),
+  failedCount: integer('failed_count').notNull().default(0),
+  sentBy: uuid('sent_by').notNull(),
+  createdAt: createdAt(),
+});
+
 export const simMessage = pgTable('sim_message', {
   id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
   tenantId: tenantId(),

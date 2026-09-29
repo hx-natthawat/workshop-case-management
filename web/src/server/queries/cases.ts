@@ -1,7 +1,7 @@
 /** Read models for the web app. Writes go through Case Service. */
 import { and, asc, desc, eq, inArray, isNull, or, type SQL } from 'drizzle-orm';
 import { db, schema } from '@/server/db';
-import type { CaseStatus, Priority } from '@/server/db/schema';
+import type { CaseStatus, MediaKind, Priority } from '@/server/db/schema';
 import { hoursOf, policies, canView, allowedTransitions } from '@/server/case/service';
 import { slaView, type SlaView } from '@/server/case/sla';
 import type { SessionUser } from '@/server/lib/auth';
@@ -190,7 +190,25 @@ export async function caseDetail(u: SessionUser, id: string, now = new Date()) {
   const rrEvent = events.find((e) => e.eventType === 'assigned' && e.note === 'round-robin');
   const parentName = L.catPath(c.categoryId).split(' › ')[0];
   const userName = (uid: string | null) => L.users.find((x) => x.id === uid)?.name ?? null;
-  const fileUrl = (aid: string) => signedFileUrl(aid);
+  // Same URL for 5 minutes so auto-refresh doesn't reload a playing video (links still live ≥ 10 min).
+  const urlNow = Math.floor(Date.now() / 300_000) * 300_000;
+  const fileUrl = (aid: string) => signedFileUrl(aid, urlNow);
+
+  // Media metadata for answers and follow-up messages (D-015). Round-1 follow-up images were never linked to the case.
+  const known = new Set(attachments.map((a) => a.id));
+  const loose = [
+    ...answers.flatMap((a) => (a.value.kind === 'files' ? a.value.attachmentIds : [])),
+    ...messages.flatMap((m) => ('attachmentId' in m.content ? [m.content.attachmentId] : [])),
+  ].filter((aid) => !known.has(aid));
+  const extra = loose.length
+    ? await db.select().from(schema.attachment).where(and(eq(schema.attachment.tenantId, u.tenantId), inArray(schema.attachment.id, [...new Set(loose)])))
+    : [];
+  const attById = new Map([...attachments, ...extra].map((a) => [a.id, a]));
+  const kindOfMime = (m: string): MediaKind => (m.startsWith('image/') ? 'image' : m.startsWith('video/') ? 'video' : m.startsWith('audio/') ? 'audio' : 'file');
+  const media = (aid: string, kind?: MediaKind) => {
+    const a = attById.get(aid);
+    return { id: aid, url: fileUrl(aid), kind: kind ?? (a ? kindOfMime(a.mimeType) : 'image'), mimeType: a?.mimeType ?? null, fileName: a?.fileName ?? null, size: a?.size ?? null };
+  };
 
   // Mark as read by the agent who owns it
   if (c.unreadByAgent && (c.assigneeId === u.id || !c.assigneeId)) {
@@ -219,17 +237,18 @@ export async function caseDetail(u: SessionUser, id: string, now = new Date()) {
     answers: answers.map((a) => ({
       key: a.questionKey, label: a.labelSnapshot, value: a.value,
       priorityNote: priorityRuleKeys.has(a.questionKey) ? priorityNote : null,
-      files: a.value.kind === 'files' ? a.value.attachmentIds.map((aid) => ({ id: aid, url: fileUrl(aid) })) : [],
+      files: a.value.kind === 'files' ? a.value.attachmentIds.map((aid, i) => media(aid, a.value.kind === 'files' ? a.value.kinds?.[i] : undefined)) : [],
     })),
     timeline: [
       ...messages.map((m) => ({
         kind: 'message' as const, id: m.id, at: m.createdAt, direction: m.direction, senderType: m.senderType,
         senderName: m.senderType === 'contact' ? (contact.fullName ?? contact.displayName ?? 'ผู้แจ้ง') : m.senderType === 'agent' ? userName(m.senderId) : 'Bot',
-        content: m.content, imageUrl: m.content.type === 'image' ? fileUrl(m.content.attachmentId) : null, deliveryError: m.deliveryError,
+        content: m.content, imageUrl: m.content.type === 'image' ? fileUrl(m.content.attachmentId) : null,
+        media: 'attachmentId' in m.content ? media(m.content.attachmentId, m.content.type) : null, deliveryError: m.deliveryError,
       })),
       ...events.filter((e) => e !== rrEvent).map((e) => ({ kind: 'event' as const, id: e.id, at: e.createdAt, eventType: e.eventType, from: e.fromValue, to: e.toValue, note: e.note, actorName: e.actorType === 'user' ? userName(e.actorId) : e.actorType === 'system' ? 'ระบบ' : 'ผู้แจ้ง', toName: e.eventType === 'assigned' ? userName(e.toValue) : e.eventType === 'created' && rrEvent ? userName(rrEvent.toValue) : null, ...(e.eventType === 'created' ? { from: parentName } : {}) })),
     ].sort((a, b) => a.at.getTime() - b.at.getTime()),
-    attachments: attachments.map((a) => ({ id: a.id, url: fileUrl(a.id), mimeType: a.mimeType })),
+    attachments: attachments.map((a) => media(a.id)),
     sla: {
       now: slaView(c, policy, L.hours, now),
       policy,

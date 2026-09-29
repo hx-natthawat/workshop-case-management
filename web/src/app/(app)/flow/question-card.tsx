@@ -121,7 +121,7 @@ export function QuestionCard({ q, index, all, selected, onSelect, onChange, onMo
               </label>
             )}
             {q.type === 'attachment' && (
-              <Field label={<span className="text-muted">กติกาหลังตอบ · จำนวนรูปสูงสุด</span>} htmlFor={`${id}-maxfiles`} hint="1–10 รูป (ค่าเริ่มต้น 5)">
+              <Field label={<span className="text-muted">กติกาหลังตอบ · จำนวนไฟล์สูงสุด</span>} htmlFor={`${id}-maxfiles`} hint="1–10 ไฟล์ (รูป วิดีโอ เสียง หรือเอกสาร ไม่เกิน 50 MB ต่อไฟล์ · ค่าเริ่มต้น 5)">
                 <Input id={`${id}-maxfiles`} type="number" min={1} max={10} className="w-32" value={q.validation?.maxFiles ?? ''} onChange={(e) => setV({ maxFiles: num(e.target.value) })} />
               </Field>
             )}

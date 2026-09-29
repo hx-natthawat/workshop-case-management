@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { step, type DialogCtx, type DialogInput, type DialogResult, type DialogState } from './dialog';
+import { answerText, step, type DialogCtx, type DialogInput, type DialogResult, type DialogState } from './dialog';
 import type { LineMessage } from './line-types';
 
 // Mirrors prototype/mock-data/bot-flow.json ("เข้าระบบไม่ได้" form).
@@ -88,7 +88,7 @@ describe('answering questions', () => {
     expect(done.effect.draft.requestedPriority).toBe('P1');
     expect(done.effect.draft.answers.map((a) => a.key)).toEqual(['system_name', 'error_msg', 'impact', 'started_at', 'screenshot']);
     expect(done.effect.draft.answers.find((a) => a.key === 'started_at')?.value).toEqual({ kind: 'datetime', iso: '2026-09-29T02:10:00.000Z' });
-    expect(done.effect.draft.answers.find((a) => a.key === 'screenshot')?.value).toEqual({ kind: 'files', attachmentIds: ['a1'] });
+    expect(done.effect.draft.answers.find((a) => a.key === 'screenshot')?.value).toEqual({ kind: 'files', attachmentIds: ['a1'], kinds: ['image'] });
   });
 
   it('asks the conditional question only when its condition matches', () => {
@@ -124,8 +124,29 @@ describe('answering questions', () => {
   it('collects images until "เสร็จ" and enforces maxFiles', () => {
     const base = [...toQ1, T('ERP'), P('cmd:skip'), T('เฉพาะตัวเอง'), P('cmd:now')];
     const r = run([...base, { kind: 'image', attachmentId: 'a1' }, { kind: 'image', attachmentId: 'a2' }, { kind: 'image', attachmentId: 'a3' }]);
-    expect(r.state?.answers.screenshot).toEqual({ kind: 'files', attachmentIds: ['a1', 'a2'] });
-    expect(texts(r.messages)).toContain('แนบได้สูงสุด 2 รูป');
+    expect(r.state?.answers.screenshot).toEqual({ kind: 'files', attachmentIds: ['a1', 'a2'], kinds: ['image', 'image'] });
+    expect(texts(r.messages)).toContain('แนบได้สูงสุด 2 ไฟล์');
+  });
+
+  it('accepts video, audio and file answers and summarises them by kind (D-015)', () => {
+    const base = [...toQ1, T('ERP'), P('cmd:skip'), T('เฉพาะตัวเอง'), P('cmd:now')];
+    const r1 = run([...base, { kind: 'video', attachmentId: 'v1' }]);
+    expect(texts(r1.messages)).toContain('ได้รับวิดีโอแล้วครับ');
+    const r = run([...base, { kind: 'video', attachmentId: 'v1' }, { kind: 'file', attachmentId: 'f1' }, P('cmd:done')]);
+    expect(r.state?.answers.screenshot).toEqual({ kind: 'files', attachmentIds: ['v1', 'f1'], kinds: ['video', 'file'] });
+    expect(r.state?.phase).toBe('summary');
+    expect(texts(r.messages)).toContain('1 วิดีโอ · 1 ไฟล์');
+  });
+
+  it('accepts an audio clip on its own', () => {
+    const base = [...toQ1, T('ERP'), P('cmd:skip'), T('เฉพาะตัวเอง'), P('cmd:now')];
+    const r = run([...base, { kind: 'audio', attachmentId: 'au1' }, P('cmd:done')]);
+    expect(answerText(r.state?.answers.screenshot)).toBe('1 คลิปเสียง');
+  });
+
+  it('keeps counting old image-only answers as images', () => {
+    expect(answerText({ kind: 'files', attachmentIds: ['a', 'b'] })).toBe('2 รูป');
+    expect(answerText({ kind: 'files', attachmentIds: ['a', 'b', 'c'], kinds: ['image', 'video', 'image'] })).toBe('2 รูป · 1 วิดีโอ');
   });
 
   it('offers a hand-off after 3 invalid answers', () => {

@@ -24,7 +24,7 @@ export async function getSettings(tenantId: string) {
   if (!t) throw new HttpError(404, 'ไม่พบข้อมูลองค์กร');
   const sla = await db.select().from(schema.slaPolicy).where(eq(schema.slaPolicy.tenantId, tenantId)).orderBy(asc(schema.slaPolicy.priority));
   return {
-    tenant: { oaName: t.oaName, bizStartMin: t.bizStartMin, bizEndMin: t.bizEndMin, pdpaText: t.pdpaText, pdpaVersion: t.pdpaVersion, slaTargetPct: t.slaTargetPct },
+    tenant: { oaName: t.oaName, bizStartMin: t.bizStartMin, bizEndMin: t.bizEndMin, pdpaText: t.pdpaText, pdpaVersion: t.pdpaVersion, slaTargetPct: t.slaTargetPct, retentionDays: t.retentionDays },
     sla: sla.map((p) => ({ priority: p.priority, responseMinutes: p.responseMinutes, resolveMinutes: p.resolveMinutes, businessHoursOnly: p.businessHoursOnly })),
   };
 }
@@ -37,6 +37,8 @@ export const settingsPatch = z.object({
   pdpaText: z.string().trim().min(1).max(10000).optional(),
   pdpaVersion: z.string().trim().min(1).max(20).optional(),
   slaTargetPct: z.number().int().min(50).max(100).optional(),
+  /** PDPA retention in days after a case closes (#19); null turns the sweep off. */
+  retentionDays: z.number().int().min(30).max(3650).nullable().optional(),
   sla: z.array(z.object({
     priority: z.enum(['P1', 'P2', 'P3', 'P4']),
     responseMinutes: z.number().int().min(1).max(100_000),
@@ -60,7 +62,7 @@ export async function updateSettings(actor: SessionUser, input: z.infer<typeof s
 
   const tenantDiff: Record<string, { from: unknown; to: unknown }> = {};
   const patch: Partial<typeof schema.tenant.$inferInsert> = {};
-  for (const k of ['oaName', 'bizStartMin', 'bizEndMin', 'pdpaText', 'pdpaVersion', 'slaTargetPct'] as const) {
+  for (const k of ['oaName', 'bizStartMin', 'bizEndMin', 'pdpaText', 'pdpaVersion', 'slaTargetPct', 'retentionDays'] as const) {
     const v = input[k];
     if (v !== undefined && v !== t[k]) {
       (patch as Record<string, unknown>)[k] = v;

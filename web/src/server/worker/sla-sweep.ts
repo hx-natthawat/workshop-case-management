@@ -13,6 +13,7 @@ import { purgeExpiredSessions } from '@/server/bot/session-store';
 import { addBusinessMinutes } from '@/server/case/business-time';
 import * as caseSvc from '@/server/case/service';
 import { remainingMinutes } from '@/server/case/sla';
+import { retentionSweep } from './retention-sweep';
 
 const CLOCK_RUNNING: CaseStatus[] = ['new', 'assigned', 'in_progress', 'reopened'];
 export const AUTO_CLOSE_RESOLVED_DAYS = 3;
@@ -86,7 +87,8 @@ export async function slaSweep(now = new Date()) {
     }
   }
   await purgeExpiredSessions(now);
-  return stats;
+  const retention = await retentionSweep(now);
+  return { ...stats, retention };
 }
 
 let started = false;

@@ -177,3 +177,22 @@
 | Q5 | ฐานที่เหมาะกับข้อมูลเคสของโครงการ | ต้องให้ฝ่ายกฎหมายวินิจฉัย |
 | Q6 | ขนาดไฟล์สูงสุดที่ผู้ใช้ส่งเข้ามา · ระยะเวลาเก็บเนื้อหาของ LINE | LINE ไม่เปิดเผย |
 | Q8 | การเลือก ticket เมื่อมีหลายเรื่องเปิดพร้อมกัน | ไม่พบเอกสารทางการ |
+
+## Q9 · Rich menu (เพิ่ม 30 ก.ย. 2569 สำหรับ G5 · #21)
+
+| ข้อความ | แหล่ง | สถานะ |
+| --- | --- | --- |
+| รูปภาพ JPEG หรือ PNG กว้าง 800–2500 px สูงอย่างน้อย 250 px อัตราส่วนกว้าง/สูงอย่างน้อย 1.45 ขนาดไม่เกิน 1 MB · เปลี่ยนรูปของ rich menu เดิมไม่ได้ ต้องสร้างใหม่ | [Upload rich menu image](https://developers.line.biz/en/reference/messaging-api/nojs/#upload-rich-menu-image) | ยืนยันแล้ว |
+| `chatBarText` ไม่เกิน 14 ตัวอักษร · `areas` ไม่เกิน 20 · `name` ไม่เกิน 300 ตัวอักษร | [Rich menu object](https://developers.line.biz/en/reference/messaging-api/nojs/#rich-menu-object) | ยืนยันแล้ว |
+| สร้าง `POST https://api.line.me/v2/bot/richmenu` · ตรวจ `POST /v2/bot/richmenu/validate` · อัปโหลดรูป `POST https://api-data.line.me/v2/bot/richmenu/{id}/content` · ตั้งเป็นค่าเริ่มต้น `POST /v2/bot/user/all/richmenu/{id}` · สร้างได้สูงสุด 1000 เมนูต่อบัญชี | [Rich menu endpoints](https://developers.line.biz/en/reference/messaging-api/nojs/#create-rich-menu) | ยืนยันแล้ว |
+
+นัยต่อการตัดสินใจ: ใช้รูป 2500×1686 px (อัตราส่วน 1.48) แบ่ง 2×2 ตาม prototype LineTrack.png ทุกครั้งที่เปลี่ยนเมนูต้องสร้าง rich menu ใหม่แล้วตั้งเป็นค่าเริ่มต้น
+
+## Q10 · Multicast สำหรับประกาศเหตุขัดข้อง (เพิ่ม 30 ก.ย. 2569 สำหรับ G6 · #21)
+
+| ข้อความ | แหล่ง | สถานะ |
+| --- | --- | --- |
+| `POST https://api.line.me/v2/bot/message/multicast` ส่งได้ครั้งละไม่เกิน 500 userId และ 5 ข้อความ · rate limit 200 requests/วินาที · ใส่ `X-Line-Retry-Key` (UUID) เพื่อส่งซ้ำอย่างปลอดภัยได้ · ผู้ที่บล็อก OA จะไม่ได้รับแต่ API ยังตอบ 200 | [Send multicast message](https://developers.line.biz/en/reference/messaging-api/nojs/#send-multicast-message) | ยืนยันแล้ว |
+| Multicast นับรวมในโควตาข้อความของแพ็กเกจตามจำนวนผู้รับ | `01-research.md` ข้อ 3 (pricing) | ยืนยันแล้ว |
+
+นัยต่อการตัดสินใจ: หน้าประกาศต้องแสดงจำนวนผู้รับและโควตาที่จะใช้ก่อนส่ง และแบ่งส่งทีละ 500 คน

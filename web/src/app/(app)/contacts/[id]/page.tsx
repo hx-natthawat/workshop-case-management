@@ -5,10 +5,12 @@ import type { ReactNode } from 'react';
 import { fullWhen, shortWhen } from '@/components/format';
 import { Card, Chip, Empty, PageHeader, PriorityChip, StatusChip } from '@/components/ui';
 import { contactDetail } from '@/server/admin/contacts';
+import { listDsr, openCaseCount } from '@/server/admin/dsr';
 import { HttpError, requirePageUser } from '@/server/lib/auth';
 import { Table, Td, Th } from '../../_admin/table';
 import { ContactStatusChip } from '../status-chip';
 import { BlockToggle, PhoneReveal } from './contact-actions';
+import { DsrRequests, PdpaActions } from './dsr-panel';
 
 export const metadata = { title: 'ผู้ติดต่อ' };
 
@@ -29,12 +31,14 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
     throw e;
   });
   const c = d.contact;
-  const canBlock = me.role !== 'agent';
+  const isStaffLead = me.role !== 'agent';
+  const canBlock = isStaffLead && !c.restrictedAt && !c.anonymisedAt;
+  const [dsr, openCases] = isStaffLead ? await Promise.all([listDsr(me.tenantId, c.id), openCaseCount(me.tenantId, c.id)]) : [[], 0];
 
   return (
     <>
       <PageHeader
-        title={<span className="flex flex-wrap items-center gap-3">{c.name}<ContactStatusChip status={c.status} />{c.isSimulated && <Chip tone="warning">จำลอง</Chip>}</span>}
+        title={<span className="flex flex-wrap items-center gap-3">{c.name}<ContactStatusChip status={c.status} />{c.restrictedAt && <Chip tone="warning">ระงับการใช้ข้อมูล</Chip>}{c.anonymisedAt && <Chip tone="neutral">ลบข้อมูลส่วนบุคคลแล้ว</Chip>}{c.isSimulated && <Chip tone="warning">จำลอง</Chip>}</span>}
         subtitle={<Link href="/contacts" className="inline-flex items-center gap-1 hover:text-accent"><ChevronLeft size={14} aria-hidden />กลับไปหน้าผู้ติดต่อ</Link>}
         actions={canBlock ? <BlockToggle contactId={c.id} blocked={c.status === 'blocked'} /> : undefined}
       />
@@ -81,6 +85,15 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
           )}
         </Card>
       </div>
+      {isStaffLead && (
+        <div className="space-y-6 px-8 pb-6">
+          <DsrRequests contactId={c.id} items={dsr} />
+          <PdpaActions
+            contact={{ id: c.id, fullName: c.fullName, customerRef: c.customerRef, orgUnit: c.orgUnit, restricted: !!c.restrictedAt, anonymised: !!c.anonymisedAt }}
+            openCases={openCases}
+          />
+        </div>
+      )}
     </>
   );
 }

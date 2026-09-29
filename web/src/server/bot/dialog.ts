@@ -2,7 +2,8 @@
  * Form-driven dialog engine (SPEC §3, design 04 §3). Pure: no I/O.
  * step(state, input, ctx) → next state + LINE messages + optional effect.
  */
-import type { AnswerValue, Priority, QuestionType, QuestionValidation } from '@/server/db/schema';
+import type { AnswerValue, MediaKind, Priority, QuestionType, QuestionValidation } from '@/server/db/schema';
+import { KIND_LABEL, mediaSummary } from '@/server/lib/media';
 import type { LineAction, LineMessage } from './line-types';
 import {
   CMD, categoryCarousel, menuActions, optionList, pb, questionBubble, subcategoryPrompt, summary, text,
@@ -52,7 +53,7 @@ export interface DialogCtx {
 export type DialogInput =
   | { kind: 'text'; text: string }
   | { kind: 'postback'; data: string; params?: { datetime?: string; date?: string; time?: string } }
-  | { kind: 'image'; attachmentId: string }
+  | { kind: MediaKind; attachmentId: string }
   | { kind: 'location'; title?: string; address?: string; latitude: number; longitude: number }
   | { kind: 'start' }
   | { kind: 'start_handoff' };
@@ -138,7 +139,7 @@ export function answerText(v: AnswerValue | undefined): string {
     case 'choice': return v.value;
     case 'datetime': return formatThaiDateTime(new Date(v.iso));
     case 'location': return [v.title, v.address].filter(Boolean).join(' · ') || `${v.latitude?.toFixed(5)}, ${v.longitude?.toFixed(5)}`;
-    case 'files': return v.attachmentIds.length ? `${v.attachmentIds.length} รูป` : 'ไม่มีไฟล์แนบ';
+    case 'files': return v.attachmentIds.length ? mediaSummary(v.attachmentIds.length, v.kinds) : 'ไม่มีไฟล์แนบ';
     case 'skipped': return 'ไม่ระบุ';
   }
 }
@@ -194,7 +195,7 @@ function promptQuestion(state: DialogState, ctx: DialogCtx, q: DialogQuestion, p
 
 function attachmentActions(q: DialogQuestion, count: number): LineAction[] {
   return [
-    { type: 'cameraRoll', label: 'เลือกรูป' },
+    { type: 'cameraRoll', label: 'เลือกรูป/วิดีโอ' },
     { type: 'camera', label: 'ถ่ายรูป' },
     ...(count > 0 ? [pb(CMD.done, 'cmd:done')] : []),
     ...(q.required ? [] : count === 0 ? [pb(CMD.skip, 'cmd:skip')] : []),
@@ -272,6 +273,12 @@ function requestedPriority(state: DialogState, ctx: DialogCtx): Priority | undef
 
 // ── Answer validation ─────────────────────────────────────────
 
+const MEDIA_KINDS: readonly string[] = ['image', 'video', 'audio', 'file'];
+export const isMedia = (i: DialogInput): i is Extract<DialogInput, { kind: MediaKind }> => MEDIA_KINDS.includes(i.kind);
+/** Old answers (MVP round 1) carry no `kinds`: they are all images. */
+const kindsOf = (v: Extract<AnswerValue, { kind: 'files' }>): MediaKind[] =>
+  v.kinds && v.kinds.length === v.attachmentIds.length ? v.kinds : v.attachmentIds.map(() => 'image' as const);
+
 type Parsed = { ok: true; value: AnswerValue } | { ok: false; error: string } | { ok: 'partial'; value: AnswerValue; messages: LineMessage[] };
 
 function parseAnswer(q: DialogQuestion, input: DialogInput, state: DialogState, ctx: DialogCtx): Parsed {
@@ -336,20 +343,22 @@ function parseAnswer(q: DialogQuestion, input: DialogInput, state: DialogState, 
       const prev = state.answers[q.key];
       const ids = prev?.kind === 'files' ? prev.attachmentIds : [];
       const max = v.maxFiles ?? 5;
-      if (input.kind === 'image') {
-        if (ids.length >= max) return { ok: false, error: `แนบได้สูงสุด ${max} รูปครับ กด "${CMD.done}" เพื่อไปต่อ` };
+      if (isMedia(input)) {
+        if (ids.length >= max) return { ok: false, error: `แนบได้สูงสุด ${max} ไฟล์ครับ กด "${CMD.done}" เพื่อไปต่อ` };
+        const prevKinds = prev?.kind === 'files' ? kindsOf(prev) : [];
         const next = [...ids, input.attachmentId];
-        const value: AnswerValue = { kind: 'files', attachmentIds: next };
+        const value: AnswerValue = { kind: 'files', attachmentIds: next, kinds: [...prevKinds, input.kind] };
+        const label = KIND_LABEL[input.kind];
         const msg = next.length >= max
-          ? `ได้รับรูปครบ ${max} รูปแล้วครับ กด "${CMD.done}" เพื่อไปต่อ`
-          : `ได้รับรูปที่ ${next.length} แล้วครับ ส่งเพิ่มได้ หรือกด "${CMD.done}"`;
+          ? `ได้รับ${label}แล้วครับ ครบ ${max} ไฟล์แล้ว กด "${CMD.done}" เพื่อไปต่อ`
+          : `ได้รับ${label}แล้วครับ (ไฟล์ที่ ${next.length}) ส่งเพิ่มได้ หรือกด "${CMD.done}"`;
         return { ok: 'partial', value, messages: [text(msg, attachmentActions(q, next.length))] };
       }
       if ((input.kind === 'postback' && input.data === 'cmd:done') || raw === CMD.done) {
-        if (ids.length === 0) return { ok: false, error: q.required ? 'ข้อนี้ต้องแนบรูปอย่างน้อย 1 รูปครับ' : `ยังไม่มีรูปแนบครับ ส่งรูป หรือกด "${CMD.skip}"` };
-        return { ok: true, value: { kind: 'files', attachmentIds: ids } };
+        if (ids.length === 0) return { ok: false, error: q.required ? 'ข้อนี้ต้องแนบไฟล์อย่างน้อย 1 ไฟล์ครับ' : `ยังไม่มีไฟล์แนบครับ ส่งรูป วิดีโอ หรือไฟล์ หรือกด "${CMD.skip}"` };
+        return { ok: true, value: prev?.kind === 'files' ? prev : { kind: 'files', attachmentIds: ids } };
       }
-      return { ok: false, error: 'กรุณาส่งรูปภาพครับ' };
+      return { ok: false, error: 'กรุณาส่งรูป วิดีโอ คลิปเสียง หรือไฟล์ครับ' };
     }
   }
 }

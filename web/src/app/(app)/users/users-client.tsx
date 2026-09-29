@@ -9,7 +9,7 @@ import { ROLE_LABEL, type Tone } from '@/server/lib/enums';
 import { Table, Td, Th } from '../_admin/table';
 
 type Role = 'agent' | 'supervisor' | 'admin';
-interface User { id: string; name: string; email: string; role: Role; teamId: string | null; isActive: boolean; lastAssignedAt: string | null }
+interface User { id: string; name: string; email: string; role: Role; teamId: string | null; isActive: boolean; lastAssignedAt: string | null; mfaEnabledAt: string | null }
 interface Team { id: string; name: string; autoAssign: boolean; memberCount: number }
 
 const ROLE_TONE: Record<Role, Tone> = { admin: 'accent', supervisor: 'info', agent: 'neutral' };
@@ -23,6 +23,13 @@ async function send(url: string, method: string, body: unknown): Promise<string 
 
 export function UsersClient({ meId, users, teams }: { meId: string; users: User[]; teams: Team[] }) {
   const [editing, setEditing] = useState<User | 'new' | null>(null);
+  const router = useRouter();
+  async function resetMfa(u: User) {
+    if (!confirm(`รีเซ็ต MFA ของ ${u.name}? ผู้ใช้ต้องตั้งค่าใหม่เมื่อเข้าสู่ระบบครั้งถัดไป`)) return;
+    const res = await fetch(`/api/users/${u.id}/mfa-reset`, { method: 'POST' });
+    if (!res.ok) alert((await res.json().catch(() => ({}))).error ?? 'รีเซ็ตไม่สำเร็จ');
+    router.refresh();
+  }
   const teamName = (id: string | null) => teams.find((t) => t.id === id)?.name ?? '-';
   return (
     <>
@@ -32,7 +39,7 @@ export function UsersClient({ meId, users, teams }: { meId: string; users: User[
       >
         <Table className="rounded-none border-0">
           <thead>
-            <tr><Th>ชื่อ</Th><Th>อีเมล</Th><Th>บทบาท</Th><Th>ทีม</Th><Th>สถานะ</Th><Th>มอบหมายล่าสุด</Th><Th className="w-24"><span className="sr-only">จัดการ</span></Th></tr>
+            <tr><Th>ชื่อ</Th><Th>อีเมล</Th><Th>บทบาท</Th><Th>ทีม</Th><Th>สถานะ</Th><Th>MFA</Th><Th>มอบหมายล่าสุด</Th><Th className="w-24"><span className="sr-only">จัดการ</span></Th></tr>
           </thead>
           <tbody>
             {users.map((u) => (
@@ -42,8 +49,12 @@ export function UsersClient({ meId, users, teams }: { meId: string; users: User[
                 <Td><Chip tone={ROLE_TONE[u.role]}>{ROLE_LABEL[u.role]}</Chip></Td>
                 <Td>{teamName(u.teamId)}</Td>
                 <Td>{u.isActive ? <Chip tone="success">ใช้งาน</Chip> : <Chip tone="neutral">ปิดใช้งาน</Chip>}</Td>
+                <Td>{u.mfaEnabledAt ? <Chip tone="success">เปิดใช้</Chip> : <Chip tone={u.role === 'admin' ? 'warning' : 'neutral'}>{u.role === 'admin' ? 'ยังไม่ตั้งค่า' : 'ไม่ใช้'}</Chip>}</Td>
                 <Td className="tabular text-muted">{u.lastAssignedAt ? shortWhen(u.lastAssignedAt) : '-'}</Td>
-                <Td className="text-right"><Button size="sm" variant="ghost" onClick={() => setEditing(u)}>แก้ไข</Button></Td>
+                <Td className="whitespace-nowrap text-right">
+                  {u.mfaEnabledAt && u.id !== meId && <Button size="sm" variant="ghost" onClick={() => resetMfa(u)}>รีเซ็ต MFA</Button>}
+                  <Button size="sm" variant="ghost" onClick={() => setEditing(u)}>แก้ไข</Button>
+                </Td>
               </tr>
             ))}
           </tbody>

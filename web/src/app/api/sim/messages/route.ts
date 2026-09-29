@@ -22,7 +22,8 @@ export const GET = handle(async (req: Request) => {
   return {
     messages: rows.map((r) => {
       const p = r.payload as Record<string, unknown>;
-      const payload = p?.type === 'image' && typeof p.attachmentId === 'string' ? { ...p, url: signedFileUrl(p.attachmentId) } : p;
+      const media = ['image', 'video', 'audio', 'file'].includes(p?.type as string) && typeof p.attachmentId === 'string';
+      const payload = media ? { ...p, url: signedFileUrl(p.attachmentId as string) } : p;
       return { id: r.id, direction: r.direction, payload, createdAt: r.createdAt };
     }),
   };

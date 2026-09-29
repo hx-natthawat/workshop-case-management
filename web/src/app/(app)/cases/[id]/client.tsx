@@ -39,7 +39,9 @@ export function AutoRefresh({ seconds }: { seconds: number }) {
   const router = useRouter();
   useEffect(() => {
     const t = setInterval(() => {
-      if (document.visibilityState === 'visible' && !document.activeElement?.matches('textarea, input, select')) router.refresh();
+      // Don't refresh while a staff member is typing or playing reporter video/audio (D-015).
+      const playing = [...document.querySelectorAll<HTMLMediaElement>('video, audio')].some((m) => !m.paused);
+      if (document.visibilityState === 'visible' && !playing && !document.activeElement?.matches('textarea, input, select')) router.refresh();
     }, seconds * 1000);
     return () => clearInterval(t);
   }, [router, seconds]);

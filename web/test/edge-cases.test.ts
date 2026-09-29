@@ -53,7 +53,7 @@ async function caseFor(contact: Contact, note: string) {
 beforeAll(async () => {
   tenant = await defaultTenant();
   const [u] = await db.select().from(schema.user).where(eq(schema.user.email, 'thanapol@example.com'));
-  sup = { id: u.id, tenantId: u.tenantId, role: u.role, name: u.name, email: u.email, teamId: u.teamId };
+  sup = { id: u.id, tenantId: u.tenantId, role: u.role, name: u.name, email: u.email, teamId: u.teamId, mfaEnabled: false };
 });
 
 describe('edge cases (analysis §3)', () => {
@@ -196,7 +196,7 @@ describe('security regressions (#14)', () => {
     const own = await caseFor(r.contact, 'เคสของ agent');
     const other = await caseFor(r.contact, 'เคสของหัวหน้า');
     const [a] = await db.select().from(schema.user).where(eq(schema.user.email, 'kamonchanok@example.com'));
-    const agent: SessionUser = { id: a.id, tenantId: a.tenantId, role: a.role, name: a.name, email: a.email, teamId: a.teamId };
+    const agent: SessionUser = { id: a.id, tenantId: a.tenantId, role: a.role, name: a.name, email: a.email, teamId: a.teamId, mfaEnabled: false };
     await caseSvc.assign(tenant.id, own.id, agent.id, actor());
     const d = await caseDetail(agent, own.id);
     expect(d.related.map((x) => x.id)).not.toContain(other.id);
@@ -213,7 +213,7 @@ describe('security regressions (#14)', () => {
     const r = await reporter();
     const c = await caseFor(r.contact, 'เคสทีมอื่น');
     await db.update(schema.kase).set({ assigneeId: null }).where(eq(schema.kase.id, c.id));
-    const loner: SessionUser = { id: randomUUID(), tenantId: tenant.id, role: 'agent', name: 'ไม่มีทีม', email: 'x@example.com', teamId: null };
+    const loner: SessionUser = { id: randomUUID(), tenantId: tenant.id, role: 'agent', name: 'ไม่มีทีม', email: 'x@example.com', teamId: null, mfaEnabled: false };
     const res = await listCases(loner, { tab: 'unassigned', status: 'all' });
     expect(res.items.map((x) => x.id)).not.toContain(c.id);
   });

@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
-import { ChevronLeft, MapPin } from 'lucide-react';
+import { ChevronLeft, Download, FileText, MapPin } from 'lucide-react';
 import { Avatar, Chip, PriorityChip, StatusChip } from '@/components/ui';
 import { fullWhen, timeOnly } from '@/components/format';
 import { db, schema } from '@/server/db';
@@ -11,6 +11,7 @@ import { formatMinutesTh, remainingMinutes } from '@/server/case/sla';
 import { businessMinutesBetween } from '@/server/case/business-time';
 import { HttpError, requirePageUser } from '@/server/lib/auth';
 import { PRIORITY, STATUS } from '@/server/lib/enums';
+import { formatBytes, KIND_LABEL } from '@/server/lib/media';
 import { caseDetail } from '@/server/queries/cases';
 import { AutoRefresh, CaseSidePanel, Composer, HeaderActions, PhoneReveal } from './client';
 
@@ -116,12 +117,7 @@ function AnswersPanel({ d }: { d: Detail }) {
               {a.value.kind === 'files' ? (
                 a.files.length ? (
                   <span className="mt-1 grid grid-cols-2 gap-2">
-                    {a.files.map((f) => (
-                      <a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-border">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={f.url} alt="ไฟล์แนบจากผู้แจ้ง" className="h-24 w-full object-cover" />
-                      </a>
-                    ))}
+                    {a.files.map((f) => <MediaTile key={f.id} f={f} />)}
                   </span>
                 ) : <span className="text-muted">ไม่มีไฟล์แนบ</span>
               ) : a.value.kind === 'location' && a.value.latitude != null ? (
@@ -139,16 +135,44 @@ function AnswersPanel({ d }: { d: Detail }) {
         <div className="mt-5">
           <h3 className="text-[12px] font-semibold text-text-2">ไฟล์แนบ</h3>
           <div className="mt-1 grid grid-cols-2 gap-2">
-            {d.attachments.map((f) => (
-              <a key={f.id} href={f.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={f.url} alt="ไฟล์แนบ" className="h-24 w-full object-cover" />
-              </a>
-            ))}
+            {d.attachments.map((f) => <MediaTile key={f.id} f={f} />)}
           </div>
         </div>
       )}
     </aside>
+  );
+}
+
+type Media = Detail['attachments'][number];
+
+/** Answers panel tile: image thumbnail, inline player, or a download row (D-015). */
+function MediaTile({ f }: { f: Media }) {
+  if (f.kind === 'image') {
+    return (
+      <a href={f.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-border">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={f.url} alt="ไฟล์แนบจากผู้แจ้ง" className="h-24 w-full object-cover" />
+      </a>
+    );
+  }
+  if (f.kind === 'video') {
+    return <video src={f.url} controls preload="metadata" aria-label="วิดีโอจากผู้แจ้ง" className="col-span-2 max-h-48 w-full rounded-lg border border-border bg-black" />;
+  }
+  if (f.kind === 'audio') return <audio src={f.url} controls preload="metadata" aria-label="คลิปเสียงจากผู้แจ้ง" className="col-span-2 w-full" />;
+  return <span className="col-span-2"><FileLink f={f} /></span>;
+}
+
+function FileLink({ f }: { f: Media }) {
+  const name = f.fileName ?? `${KIND_LABEL[f.kind]}แนบ`;
+  return (
+    <a href={f.url} download={name} className="flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2 text-left hover:bg-neutral-tint">
+      <FileText size={20} className="shrink-0 text-muted" aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14px] font-medium">{name}</span>
+        {f.size != null && <span className="block text-[12px] text-muted tabular">{formatBytes(f.size)}</span>}
+      </span>
+      <Download size={16} className="shrink-0 text-accent" aria-label="ดาวน์โหลด" />
+    </a>
   );
 }
 
@@ -163,12 +187,13 @@ const EVENT_TEXT: Record<string, (t: Extract<Detail['timeline'][number], { kind:
   pending_reminder: () => 'ระบบเตือนผู้แจ้งให้ส่งข้อมูลเพิ่มเติม',
   delivery_failed: (t) => `ส่งข้อความทาง LINE ไม่สำเร็จ${t.note ? ` · ${t.note}` : ''}`,
   delivery_skipped: (t) => t.note ?? 'ส่งข้อความไม่ได้',
+  media_failed: (t) => t.note ?? 'รับไฟล์จากผู้แจ้งไม่สำเร็จ',
 };
 
 function TimelineItem({ t }: { t: Detail['timeline'][number] }) {
   if (t.kind === 'event') {
     const txt = EVENT_TEXT[t.eventType]?.(t) ?? t.eventType;
-    const bad = t.eventType === 'sla_breached' || t.eventType.startsWith('delivery_');
+    const bad = t.eventType === 'sla_breached' || t.eventType.startsWith('delivery_') || t.eventType === 'media_failed';
     return (
       <p className={clsx('flex items-start gap-2 text-[13px]', bad ? 'text-critical' : 'text-muted')}>
         <span className="mt-2 size-1.5 shrink-0 rounded-full bg-current" aria-hidden />
@@ -180,7 +205,7 @@ function TimelineItem({ t }: { t: Detail['timeline'][number] }) {
   const internal = t.direction === 'internal';
   const c = t.content;
   const body = c.type === 'text' ? c.text
-    : c.type === 'form_submitted' ? `ส่งแบบฟอร์มแจ้งเคส ${c.answerCount} ข้อ${c.attachmentCount ? ` พร้อมภาพหน้าจอ ${c.attachmentCount} รูป` : ''}`
+    : c.type === 'form_submitted' ? `ส่งแบบฟอร์มแจ้งเคส ${c.answerCount} ข้อ${c.attachmentCount ? ` พร้อมไฟล์แนบ ${c.attachmentCount} ไฟล์` : ''}`
     : c.type === 'location' ? `📍 ${[c.title, c.address].filter(Boolean).join(' · ') || 'ตำแหน่ง'}`
     : null;
   return (
@@ -199,6 +224,12 @@ function TimelineItem({ t }: { t: Detail['timeline'][number] }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={t.imageUrl} alt="รูปจากผู้แจ้ง" className="max-h-60 rounded-lg" />
             </a>
+          ) : c.type === 'video' && t.media ? (
+            <video src={t.media.url} controls preload="metadata" aria-label="วิดีโอจากผู้แจ้ง" className="max-h-72 max-w-full rounded-lg bg-black" />
+          ) : c.type === 'audio' && t.media ? (
+            <audio src={t.media.url} controls preload="metadata" aria-label="คลิปเสียงจากผู้แจ้ง" className="w-72 max-w-full" />
+          ) : c.type === 'file' && t.media ? (
+            <FileLink f={t.media} />
           ) : c.type === 'location' ? (
             <a className="underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps?q=${c.latitude},${c.longitude}`}>{body}</a>
           ) : body}

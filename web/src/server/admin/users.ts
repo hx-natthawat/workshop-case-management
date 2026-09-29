@@ -15,6 +15,7 @@ export interface StaffRow {
   teamId: string | null;
   isActive: boolean;
   lastAssignedAt: Date | null;
+  mfaEnabledAt: Date | null;
   createdAt: Date;
 }
 
@@ -33,6 +34,7 @@ const publicCols = {
   teamId: schema.user.teamId,
   isActive: schema.user.isActive,
   lastAssignedAt: schema.user.lastAssignedAt,
+  mfaEnabledAt: schema.user.mfaEnabledAt,
   createdAt: schema.user.createdAt,
 };
 

@@ -112,6 +112,9 @@ export async function contactDetail(u: SessionUser, id: string) {
       id: c.id,
       name: nameOf(c),
       displayName: c.displayName,
+      fullName: c.fullName,
+      restrictedAt: c.restrictedAt,
+      anonymisedAt: c.anonymisedAt,
       phoneMasked: maskPhone(c.phone),
       hasPhone: !!c.phone,
       customerRef: c.customerRef,
@@ -141,6 +144,8 @@ export const contactPatch = z.object({ status: z.enum(['active', 'blocked']) });
 export async function setContactStatus(u: SessionUser, id: string, status: 'active' | 'blocked', ip: string | null) {
   const c = await getContact(u.tenantId, id);
   if (c.status === status) return { status };
+  if (c.anonymisedAt) throw new HttpError(409, 'ข้อมูลของผู้ติดต่อนี้ถูกลบตาม PDPA แล้ว เปลี่ยนสถานะไม่ได้'); // #22 finding 3
+  if (c.restrictedAt) throw new HttpError(409, 'ผู้ติดต่อนี้ถูกระงับการใช้ข้อมูลตามคำขอ PDPA กรุณายกเลิกการระงับในส่วนคำขอของเจ้าของข้อมูล');
   await db.update(schema.contact).set({ status }).where(and(eq(schema.contact.id, c.id), eq(schema.contact.tenantId, u.tenantId)));
   await audit({
     tenantId: u.tenantId, actorId: u.id, action: status === 'blocked' ? 'contact.blocked' : 'contact.unblocked',

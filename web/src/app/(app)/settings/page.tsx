@@ -1,4 +1,5 @@
 import { CheckCircle2, CircleDashed } from 'lucide-react';
+import { RichMenuCard } from './rich-menu-card';
 import { Card, Chip, PageHeader } from '@/components/ui';
 import { getSettings, lineStatus } from '@/server/admin/settings';
 import { requirePageUser } from '@/server/lib/auth';
@@ -47,6 +48,7 @@ export default async function SettingsPage() {
             </div>
           </div>
         </Card>
+        <RichMenuCard canProvision={line.accessToken} />
         <SettingsForm initial={s} />
       </div>
     </>

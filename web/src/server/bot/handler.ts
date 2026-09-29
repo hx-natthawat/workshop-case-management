@@ -6,13 +6,15 @@ import { and, eq, inArray, ne } from 'drizzle-orm';
 import { db, schema } from '@/server/db';
 import type { MessageContent } from '@/server/db/schema';
 import * as caseSvc from '@/server/case/service';
-import { fetchContent, getProfile, reply, showLoading } from '@/server/messaging/gateway';
+import { ContentError, fetchContent, getProfile, reply, showLoading } from '@/server/messaging/gateway';
 import { isSimUser, registerUrl } from '@/server/lib/config';
 import { PRIORITY, STATUS } from '@/server/lib/enums';
+import { checkMedia, KIND_LABEL, MAX_MEDIA_BYTES, MEDIA_ERROR_TEXT, type MediaFailure, type MediaKind } from '@/server/lib/media';
 import { putObject } from '@/server/lib/storage';
-import { answerText, formatThaiDateTime, step, type DialogCategory, type DialogCtx, type DialogForm, type DialogInput, type DialogResult } from './dialog';
+import { answerText, formatThaiDateTime, isMedia, step, type DialogCategory, type DialogCtx, type DialogForm, type DialogInput, type DialogResult } from './dialog';
 import type { LineEvent, LineMessage } from './line-types';
 import * as M from './messages';
+import { botText, loadBotTexts } from './bot-texts';
 import { loadSession, saveSession, type BotSession } from './session-store';
 
 type Tenant = typeof schema.tenant.$inferSelect;
@@ -24,6 +26,7 @@ const CASE_NO_RE = /^CS-\d{4}-\d{5}$/i;
 
 /** Process a webhook body. Each event runs once, keyed by webhookEventId (research §2). */
 export async function handleEvents(tenant: Tenant, events: LineEvent[]) {
+  await loadBotTexts(tenant.id);
   for (const ev of events) {
     const [fresh] = await db.insert(schema.processedEvent)
       .values({ webhookEventId: ev.webhookEventId, tenantId: tenant.id })
@@ -107,39 +110,88 @@ async function handleEvent(tenant: Tenant, ev: LineEvent) {
   await reply(tenant.id, ev.replyToken, userId, out);
 }
 
-async function toInput(tenant: Tenant, ev: LineEvent): Promise<DialogInput | { kind: 'unsupported' }> {
+type MediaFailed = { kind: 'media_failed'; media: MediaKind; reason: MediaFailure };
+
+async function toInput(tenant: Tenant, contact: Contact, ev: LineEvent): Promise<DialogInput | MediaFailed | { kind: 'unsupported' }> {
   if (ev.type === 'postback' && ev.postback) return { kind: 'postback', data: ev.postback.data, params: ev.postback.params };
   const m = ev.message;
   if (!m) return { kind: 'unsupported' };
   if (m.type === 'text' && 'text' in m) return { kind: 'text', text: m.text };
   if (m.type === 'location' && 'latitude' in m) return { kind: 'location', title: m.title, address: m.address, latitude: m.latitude, longitude: m.longitude };
-  if (m.type === 'image') {
-    const attachmentId = await storeImage(tenant, m.id);
-    return { kind: 'image', attachmentId };
+  if (m.type === 'image' || m.type === 'video' || m.type === 'audio' || m.type === 'file') {
+    const r = await storeMedia(tenant, contact, m as MediaMessage);
+    return r.ok ? { kind: m.type, attachmentId: r.attachmentId } : { kind: 'media_failed', media: m.type, reason: r.reason };
   }
   return { kind: 'unsupported' };
 }
 
-/** Download now; LINE deletes content later (research §8). Simulator images are already stored. */
-async function storeImage(tenant: Tenant, messageId: string): Promise<string> {
-  if (messageId.startsWith('simatt:')) return messageId.slice(7);
-  const { data, mimeType } = await fetchContent(messageId);
-  const obj = await putObject(data, mimeType);
-  const [a] = await db.insert(schema.attachment).values({ tenantId: tenant.id, storageKey: obj.key, mimeType, size: obj.size, checksum: obj.checksum }).returning();
-  return a.id;
+type MediaMessage = { type: MediaKind; id: string; fileName?: string; fileSize?: number; contentProvider?: { type: 'line' | 'external' } };
+
+/**
+ * Download now; LINE deletes content later (research §8). Video/audio may still be
+ * transcoding: fetchContent polls for up to ~30 s, then we give up and say so (D-015).
+ * Simulator uploads are already stored and checked.
+ */
+async function storeMedia(tenant: Tenant, contact: Contact, m: MediaMessage): Promise<{ ok: true; attachmentId: string } | { ok: false; reason: MediaFailure }> {
+  if (m.id.startsWith('simatt:')) return { ok: true, attachmentId: m.id.slice(7) };
+  if (m.contentProvider?.type === 'external') return { ok: false, reason: 'external' };
+  if (m.type === 'file' && (m.fileSize ?? 0) > MAX_MEDIA_BYTES) return { ok: false, reason: 'size' };
+  try {
+    const { data, mimeType } = await fetchContent(m.id, { maxBytes: MAX_MEDIA_BYTES });
+    const check = checkMedia(m.type, mimeType, data.length, m.fileName);
+    if (!check.ok) return { ok: false, reason: check.reason };
+    const obj = await putObject(data, check.mimeType);
+    const [a] = await db.insert(schema.attachment).values({
+      tenantId: tenant.id, contactId: contact.id, storageKey: obj.key, mimeType: check.mimeType, fileName: m.fileName?.slice(0, 255) ?? null, size: obj.size, checksum: obj.checksum,
+    }).returning();
+    return { ok: true, attachmentId: a.id };
+  } catch (e) {
+    if (e instanceof ContentError) {
+      console.warn('[bot] media not stored', m.type, m.id, e.code, e.message);
+      return { ok: false, reason: e.code };
+    }
+    throw e;
+  }
 }
 
 function toContent(input: DialogInput): MessageContent | null {
   if (input.kind === 'text') return { type: 'text', text: input.text };
-  if (input.kind === 'image') return { type: 'image', attachmentId: input.attachmentId };
+  if (isMedia(input)) return { type: input.kind, attachmentId: input.attachmentId };
   if (input.kind === 'location') return { type: 'location', title: input.title, address: input.address, latitude: input.latitude, longitude: input.longitude };
   return null;
 }
 
+/** Tell the reporter, and note it on the case the message would have gone to (D-015). */
+async function mediaFailed(tenant: Tenant, contact: Contact, f: MediaFailed, now: Date): Promise<LineMessage[]> {
+  const what = KIND_LABEL[f.media];
+  const why = MEDIA_ERROR_TEXT[f.reason];
+  const hint = f.reason === 'size' || f.reason === 'type' || f.reason === 'external'
+    ? 'กรุณาส่งไฟล์อื่น หรือพิมพ์รายละเอียดแทนครับ'
+    : 'กรุณาส่งใหม่อีกครั้งครับ';
+  const session = await loadSession(tenant.id, contact.lineUserId, now);
+  if (!session.dialog) {
+    const open = await caseSvc.openCasesOf(tenant.id, contact.id);
+    const pending = open.filter((c) => c.status === 'pending_customer');
+    const active = open.filter((c) => c.status !== 'resolved');
+    const target = pending.length === 1 ? pending[0] : pending.length === 0 && active.length === 1 ? active[0] : null;
+    if (target) await caseSvc.recordMediaFailure(tenant.id, target, contact, `ผู้แจ้งส่ง${what}มาแต่ระบบรับไม่สำเร็จ · ${why}`, now);
+  }
+  return [M.text(`ขออภัยครับ ระบบรับ${what}ไม่สำเร็จ (${why}) ${hint}`)];
+}
+
 async function route(tenant: Tenant, contact: Contact, ev: LineEvent): Promise<LineMessage[]> {
-  const input = await toInput(tenant, ev);
+  // Never download media for unregistered users: no storage use and no personal data before registration (#22 finding 2)
+  const mt = ev.type === 'message' ? ev.message?.type : undefined;
+  if ((mt === 'image' || mt === 'video' || mt === 'audio' || mt === 'file') && !isRegistered(contact)) {
+    return M.registerFirst(registerUrl(contact.lineUserId));
+  }
+  const input = await toInput(tenant, contact, ev);
   if (input.kind === 'unsupported') {
-    return [M.text('ขออภัยครับ ตอนนี้รองรับเฉพาะข้อความ รูปภาพ และตำแหน่งครับ')];
+    return [M.text('ขออภัยครับ ตอนนี้รองรับข้อความ รูปภาพ วิดีโอ คลิปเสียง ไฟล์ และตำแหน่งครับ')];
+  }
+  if (input.kind === 'media_failed') {
+    if (!isRegistered(contact)) return M.registerFirst(registerUrl(contact.lineUserId));
+    return mediaFailed(tenant, contact, input, new Date());
   }
   const now = new Date();
   const data = input.kind === 'postback' ? input.data : null;
@@ -251,7 +303,7 @@ async function runDialog(tenant: Tenant, contact: Contact, input: DialogInput, n
       note: result.effect.note ?? `ขอคุยกับเจ้าหน้าที่ระหว่างแจ้งเรื่อง${catName ? ` "${catName}"` : ''}`,
     },
   });
-  return [M.text(`ส่งเรื่องถึงเจ้าหน้าที่แล้วครับ เลขเคส ${r.case.caseNo}\nเจ้าหน้าที่จะตอบกลับในแชทนี้ครับ`, [M.pb(M.MENU_TEXT.myCases, 'menu:my_cases')])];
+  return [M.text(botText('handoff_ack', { caseNo: r.case.caseNo }), [M.pb(M.MENU_TEXT.myCases, 'menu:my_cases')])];
 }
 
 // ── Case binding ──────────────────────────────────────────────
@@ -272,7 +324,7 @@ async function bindToCase(tenant: Tenant, contact: Contact, content: MessageCont
     return [M.text(`ส่งข้อความถึงเจ้าหน้าที่ของเคส ${candidates[0].caseNo} แล้วครับ\nหากเป็นเรื่องใหม่ กด "แจ้งปัญหาใหม่" ได้เลยครับ`, [M.pb(M.MENU_TEXT.start, 'menu:start'), M.pb(M.MENU_TEXT.myCases, 'menu:my_cases')])];
   }
   if (!candidates.length) {
-    return [M.text('สวัสดีครับ ต้องการแจ้งปัญหาใหม่ หรือดูเคสของคุณครับ', M.menuActions())];
+    return [M.text(botText('idle'), M.menuActions())];
   }
   await saveSession(tenant.id, contact.lineUserId, { forward: { content, lineMessageId } }, now);
   const prefix = pending.length > 1 ? 'pend' : 'fwd';

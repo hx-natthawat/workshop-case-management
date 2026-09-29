@@ -173,7 +173,7 @@ async function seedSamples(tenantId: string, catIds: Record<string, string>, use
   }
   const asUser = (name: string): { type: 'user'; user: SessionUser } => {
     const u = users[name];
-    return { type: 'user', user: { id: u.id, tenantId, role: 'admin', name: u.name, email: u.email, teamId: u.teamId } };
+    return { type: 'user', user: { id: u.id, tenantId, role: 'admin', name: u.name, email: u.email, teamId: u.teamId, mfaEnabled: false } };
   };
   const text = (t: string) => ({ kind: 'text' as const, text: t });
   const min = 60_000;

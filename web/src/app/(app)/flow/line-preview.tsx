@@ -27,8 +27,8 @@ export function LinePreview({ q, index, total }: { q: Q | null; index: number; t
       case 'datetime': chips = ['เลือกวันและเวลา', 'เพิ่งเกิดเมื่อสักครู่', ...skip, 'ย้อนกลับ']; break;
       case 'location': chips = ['ส่งตำแหน่ง', ...skip, 'ย้อนกลับ']; break;
       case 'attachment':
-        hint = `(ส่งได้สูงสุด ${q.validation?.maxFiles ?? 5} รูป เมื่อครบแล้วกด "เสร็จ")`;
-        chips = ['เลือกรูป', 'ถ่ายรูป', ...skip, 'ย้อนกลับ'];
+        hint = `(ส่งรูป วิดีโอ เสียง หรือไฟล์ได้สูงสุด ${q.validation?.maxFiles ?? 5} ไฟล์ เมื่อครบแล้วกด "เสร็จ")`;
+        chips = ['เลือกรูป/วิดีโอ', 'ถ่ายรูป', ...skip, 'ย้อนกลับ'];
         break;
       default: chips = [...skip, 'ย้อนกลับ'];
     }

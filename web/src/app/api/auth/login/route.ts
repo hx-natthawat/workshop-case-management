@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db, schema } from '@/server/db';
 import { audit } from '@/server/lib/audit';
-import { createSessionToken, HttpError, SESSION_COOKIE, sessionCookieOptions } from '@/server/lib/auth';
+import { createMfaPendingToken, createSessionToken, HttpError, MFA_PENDING_COOKIE, mfaPendingCookieOptions, SESSION_COOKIE, sessionCookieOptions } from '@/server/lib/auth';
 import { clientIp, handle } from '@/server/lib/http';
 import { defaultTenant } from '@/server/lib/tenant';
 
@@ -34,6 +34,12 @@ export const POST = handle(async (req: Request) => {
     throw new HttpError(401, 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
   }
   fails.delete(keys[0]);
+  if (u.mfaEnabledAt) {
+    // ADR 0006: password OK, now ask for the authenticator code; no session yet
+    const res = NextResponse.json({ ok: true, mfaRequired: true });
+    res.cookies.set(MFA_PENDING_COOKIE, await createMfaPendingToken(u.id, u.tenantId), mfaPendingCookieOptions);
+    return res;
+  }
   await audit({ tenantId: tenant.id, actorId: u.id, action: 'auth.login', entity: 'user', entityId: u.id, ip: clientIp(req) });
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, await createSessionToken(u), sessionCookieOptions);

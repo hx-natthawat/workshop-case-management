@@ -7,6 +7,7 @@ import { HttpError } from '@/server/lib/auth';
 import { config, isSimUser } from '@/server/lib/config';
 import { push } from '@/server/messaging/gateway';
 import { registered } from './messages';
+import { loadBotTexts } from './bot-texts';
 
 type Tenant = typeof schema.tenant.$inferSelect;
 
@@ -60,6 +61,7 @@ export async function registerContact(tenant: Tenant, lineUserId: string, input:
     tenantId: tenant.id, actorType: 'contact', actorId: contact.id, action: 'contact.consented', entity: 'contact', entityId: contact.id,
     diff: { consentVersion: tenant.pdpaVersion, fields: ['fullName', 'phone', 'customerRef', 'orgUnit'] }, ip,
   });
+  await loadBotTexts(tenant.id);
   await push(tenant.id, lineUserId, registered(data.fullName.split(' ')[0]));
   return contact;
 }

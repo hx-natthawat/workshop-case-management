@@ -47,7 +47,7 @@ const asActor = (u: SessionUser) => ({ type: 'user' as const, user: u });
 
 async function staff(email: string): Promise<SessionUser> {
   const [u] = await db.select().from(schema.user).where(eq(schema.user.email, email));
-  return { id: u.id, tenantId: u.tenantId, role: u.role, name: u.name, email: u.email, teamId: u.teamId };
+  return { id: u.id, tenantId: u.tenantId, role: u.role, name: u.name, email: u.email, teamId: u.teamId, mfaEnabled: false };
 }
 
 async function latestCase() {

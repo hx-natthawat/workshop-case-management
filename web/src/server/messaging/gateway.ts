@@ -65,13 +65,67 @@ export async function reply(tenantId: string, replyToken: string | undefined, li
   return push(tenantId, lineUserId, messages);
 }
 
-/** Download image content right away: LINE deletes it after a while (research §8). */
-export async function fetchContent(messageId: string): Promise<{ data: Buffer; mimeType: string }> {
-  const res = await fetch(`${DATA_API}/message/${encodeURIComponent(messageId)}/content`, {
-    headers: { Authorization: `Bearer ${config.line.accessToken()}` },
-  });
-  if (!res.ok) throw new Error(`LINE content ${res.status}`);
-  return { data: Buffer.from(await res.arrayBuffer()), mimeType: res.headers.get('content-type') ?? 'application/octet-stream' };
+export type ContentErrorCode = 'fetch' | 'size' | 'transcoding' | 'transcoding_failed';
+export class ContentError extends Error {
+  constructor(public code: ContentErrorCode, message: string) { super(message); }
+}
+
+/** Waits between transcoding checks; total ≈ 30 s (D-015). Tests shrink it. */
+export const transcodingBackoff = { delaysMs: [1000, 2000, 3000, 4000, 5000, 5000, 5000, 5000] };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Read a body, giving up once it passes `maxBytes`. */
+async function readCapped(res: Response, maxBytes: number): Promise<Buffer> {
+  const declared = Number(res.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await res.body?.cancel().catch(() => undefined);
+    throw new ContentError('size', `content-length ${declared} > ${maxBytes}`);
+  }
+  if (!res.body) return Buffer.from(await res.arrayBuffer());
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const reader = res.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw new ContentError('size', `content > ${maxBytes}`);
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
+/**
+ * Download user-sent content right away: LINE deletes it after a while (research §8).
+ * Video/audio may answer 202 while LINE prepares it; then poll `/content/transcoding`
+ * with a short backoff and fetch again once it reports `succeeded` (research r1 Q6).
+ */
+export async function fetchContent(messageId: string, opts: { maxBytes?: number } = {}): Promise<{ data: Buffer; mimeType: string }> {
+  const maxBytes = opts.maxBytes ?? Number.MAX_SAFE_INTEGER;
+  const base = `${DATA_API}/message/${encodeURIComponent(messageId)}/content`;
+  const headers = { Authorization: `Bearer ${config.line.accessToken()}` };
+  const get = () => fetch(base, { headers }).catch((e: unknown) => { throw new ContentError('fetch', String(e)); });
+
+  let res = await get();
+  if (res.status === 202) {
+    await res.body?.cancel().catch(() => undefined);
+    let ready = false;
+    for (const wait of transcodingBackoff.delaysMs) {
+      await sleep(wait);
+      const t = await fetch(`${base}/transcoding`, { headers }).catch(() => null);
+      const status = t?.ok ? ((await t.json().catch(() => ({}))) as { status?: string }).status : undefined;
+      if (status === 'failed') throw new ContentError('transcoding_failed', 'LINE transcoding failed');
+      if (status === 'succeeded') { ready = true; break; }
+    }
+    if (!ready) throw new ContentError('transcoding', 'LINE content still transcoding');
+    res = await get();
+  }
+  if (res.status === 202) throw new ContentError('transcoding', 'LINE content still transcoding');
+  if (!res.ok) throw new ContentError('fetch', `LINE content ${res.status}`);
+  return { data: await readCapped(res, maxBytes), mimeType: res.headers.get('content-type') ?? 'application/octet-stream' };
 }
 
 export async function getProfile(lineUserId: string): Promise<{ displayName?: string } | null> {
