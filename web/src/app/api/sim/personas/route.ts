@@ -10,7 +10,7 @@ import { dispatch, recordUserAction, requireSimulator } from '../sim-lib';
 export const dynamic = 'force-dynamic';
 
 export const GET = handle(async () => {
-  requireSimulator();
+  await requireSimulator();
   const tenant = await defaultTenant();
   const c = schema.contact;
   const openCases = db
@@ -40,7 +40,7 @@ export const GET = handle(async () => {
 const createSchema = z.object({ displayName: z.string().trim().min(1, 'กรุณากรอกชื่อที่แสดง').max(40) });
 
 export const POST = handle(async (req: Request) => {
-  requireSimulator();
+  await requireSimulator();
   const { displayName } = createSchema.parse(await req.json());
   const lineUserId = `Usim${randomBytes(5).toString('hex')}`;
   const tenant = await defaultTenant();

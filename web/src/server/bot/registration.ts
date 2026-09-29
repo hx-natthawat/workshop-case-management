@@ -26,7 +26,10 @@ export type RegistrationInput = z.input<typeof registrationSchema>;
  */
 export async function verifyLiffIdToken(idToken: string): Promise<string> {
   const clientId = config.line.loginChannelId();
-  if (!clientId) throw new HttpError(500, 'LINE_LOGIN_CHANNEL_ID is not set');
+  if (!clientId) {
+    console.error('[liff] LINE_LOGIN_CHANNEL_ID is not set');
+    throw new HttpError(503, 'ระบบลงทะเบียนยังไม่พร้อมใช้งาน กรุณาติดต่อเจ้าหน้าที่'); // don't leak config names (#14 L5)
+  }
   const res = await fetch('https://api.line.me/oauth2/v2.1/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -47,6 +50,8 @@ export async function registerContact(tenant: Tenant, lineUserId: string, input:
     consentVersion: tenant.pdpaVersion, consentAt: now, status: 'active' as const,
   };
   const [existing] = await db.select().from(schema.contact).where(and(eq(schema.contact.tenantId, tenant.id), eq(schema.contact.lineUserId, lineUserId)));
+  // Re-registering must not lift a staff block (#14 M2).
+  if (existing?.status === 'blocked') throw new HttpError(403, 'บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อเจ้าหน้าที่');
   const [contact] = existing
     ? await db.update(schema.contact).set(values).where(eq(schema.contact.id, existing.id)).returning()
     : await db.insert(schema.contact).values({ tenantId: tenant.id, lineUserId, isSimulated: isSimUser(lineUserId), ...values }).returning();

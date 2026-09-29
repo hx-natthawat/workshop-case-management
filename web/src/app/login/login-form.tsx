@@ -24,7 +24,9 @@ export function LoginForm() {
       setError((await res.json().catch(() => ({}))).error ?? 'เข้าสู่ระบบไม่สำเร็จ');
       return;
     }
-    router.push('/dashboard');
+    // Only same-site relative paths (no open redirect)
+    const next = new URLSearchParams(window.location.search).get('next');
+    router.push(next && /^\/(?!\/)/.test(next) ? next : '/dashboard');
     router.refresh();
   }
 

@@ -2,7 +2,7 @@
  * Bot Service: turns LINE webhook events into dialog steps and Case Service calls.
  * It never writes case status itself (design 04 §1).
  */
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import { db, schema } from '@/server/db';
 import type { MessageContent } from '@/server/db/schema';
 import * as caseSvc from '@/server/case/service';
@@ -78,7 +78,9 @@ async function handleEvent(tenant: Tenant, ev: LineEvent) {
   if (ev.mode === 'standby') return;
 
   if (ev.type === 'unfollow') {
-    await db.update(schema.contact).set({ status: 'unfollowed' }).where(and(eq(schema.contact.tenantId, tenant.id), eq(schema.contact.lineUserId, userId)));
+    // A blocked contact stays blocked: unfollow/follow must not clear a staff block (#14 M1).
+    await db.update(schema.contact).set({ status: 'unfollowed' })
+      .where(and(eq(schema.contact.tenantId, tenant.id), eq(schema.contact.lineUserId, userId), ne(schema.contact.status, 'blocked')));
     return;
   }
 

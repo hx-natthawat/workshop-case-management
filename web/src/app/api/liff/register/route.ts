@@ -1,3 +1,4 @@
+import { hasSimulatorAccess } from '@/server/lib/sim-access';
 import { z } from 'zod';
 import { registerContact, verifyLiffIdToken, type RegistrationInput } from '@/server/bot/registration';
 import { HttpError } from '@/server/lib/auth';
@@ -16,7 +17,7 @@ export const POST = handle(async (req: Request) => {
   const { simUserId, idToken } = identitySchema.parse(body);
   let lineUserId: string;
   if (simUserId) {
-    if (!config.simulatorEnabled() || !isSimUser(simUserId)) throw new HttpError(403, 'ไม่อนุญาตให้ลงทะเบียนในโหมดจำลอง');
+    if (!config.simulatorEnabled() || !isSimUser(simUserId) || !(await hasSimulatorAccess())) throw new HttpError(403, 'ไม่อนุญาตให้ลงทะเบียนในโหมดจำลอง');
     lineUserId = simUserId;
   } else if (idToken) {
     lineUserId = await verifyLiffIdToken(idToken);

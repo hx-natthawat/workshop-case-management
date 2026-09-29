@@ -8,7 +8,7 @@ import { requireSimulator, requireSimUserId } from '../sim-lib';
 export const dynamic = 'force-dynamic';
 
 export const GET = handle(async (req: Request) => {
-  requireSimulator();
+  await requireSimulator();
   const url = new URL(req.url);
   const userId = requireSimUserId(url.searchParams.get('userId'));
   const after = Number(url.searchParams.get('after') ?? 0) || 0;

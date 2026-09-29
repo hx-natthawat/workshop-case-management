@@ -19,7 +19,7 @@ pnpm dev                     # http://localhost:3000
 ```
 
 - Staff app: http://localhost:3000. Seeded accounts are in `scripts/seed.ts` (`USERS`). They all use the password in `SEED_PASSWORD` (default in the same file).
-- LINE Simulator: http://localhost:3000/simulator. Pick a persona or create a new tester.
+- LINE Simulator: http://localhost:3000/simulator. Staff who are logged in can use it directly; testers need the code set in `SIMULATOR_ACCESS_CODE`. Pick a persona or create a new tester.
 - `SEED_SAMPLES=false pnpm db:reset` starts with no cases (useful before a real test session).
 - After any `db:reset`, restart `pnpm dev` and log in again (the tenant is cached in memory and sessions point at the old tenant).
 

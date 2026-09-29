@@ -33,7 +33,7 @@ const bodySchema = z.object({ userId: z.string(), event: eventSchema });
 const msgId = () => randomUUID().replace(/-/g, '').slice(0, 18);
 
 export const POST = handle(async (req: Request) => {
-  requireSimulator();
+  await requireSimulator();
   const tenant = await defaultTenant();
 
   if ((req.headers.get('content-type') ?? '').includes('multipart/form-data')) {

@@ -6,9 +6,11 @@ import { db, schema } from '@/server/db';
 import { HttpError } from '@/server/lib/auth';
 import { config, isSimUser } from '@/server/lib/config';
 import { defaultTenant } from '@/server/lib/tenant';
+import { hasSimulatorAccess } from '@/server/lib/sim-access';
 
-export function requireSimulator() {
+export async function requireSimulator() {
   if (!config.simulatorEnabled()) throw new HttpError(404, 'Not found');
+  if (!(await hasSimulatorAccess())) throw new HttpError(401, 'กรุณาเข้าสู่ระบบหรือใส่รหัสผู้ทดสอบก่อนใช้ Simulator');
 }
 
 export function requireSimUserId(userId: unknown): string {

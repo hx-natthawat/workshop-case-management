@@ -1,5 +1,5 @@
 # PO Status
-Current stage: 7 Build (MVP for user testing) → 8 Verify next
+Current stage: 8 Verify done → ready for the user test; next: stage 9 feedback from test sessions
 
 Task board: https://github.com/users/hx-natthawat/projects/2 (every assignment is an issue with label `po-task`)
 
@@ -11,8 +11,8 @@ Task board: https://github.com/users/hx-natthawat/projects/2 (every assignment i
 | 4 | Design | awaiting approval | docs/po/04-design.md | Prototype approved by Fero 2026-09-29 = UI source of truth · parity in 08-design-parity.md (#11 #12 done) |
 | 5 | Plan | awaiting approval | docs/po/05-plan.md | Slices S0–S9 |
 | 6 | ADR | awaiting approval | docs/adr/0001–0005 | All `Proposed`; become `Accepted` on Fero's approval |
-| 7 | Build | done (pending verify) | web/ | #3–#8, #11, #12 done |
-| 8 | Verify | todo | docs/po/08-verify-mvp.md | #9 |
+| 7 | Build | done | web/ | #3–#8, #11, #12, #15 done |
+| 8 | Verify | done | docs/po/08-verify-mvp.md | #9 · #14 security review (9 findings, all fixed in #15) · verdict: ready for user test with fictional data |
 | 9 | Feedback | in progress | docs/po/09-feedback.md | 16 items open |
 
 ## Blockers

@@ -70,6 +70,7 @@ export async function policies(tenantId: string, tx: DbOrTx = db): Promise<Recor
 }
 
 export async function getCase(tenantId: string, caseId: string, tx: DbOrTx = db): Promise<CaseRow> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(caseId)) throw new HttpError(404, 'ไม่พบเคส'); // #14 L4
   const [c] = await tx.select().from(schema.kase).where(and(eq(schema.kase.id, caseId), eq(schema.kase.tenantId, tenantId)));
   if (!c) throw new HttpError(404, 'ไม่พบเคส');
   return c;
@@ -224,6 +225,7 @@ interface TransitionOpts {
 
 export async function transition(tenantId: string, caseId: string, to: CaseStatus, actor: Actor, opts: TransitionOpts = {}) {
   const now = opts.now ?? new Date();
+  await getCase(tenantId, caseId); // validates the id before the row lock
   const result = await db.transaction(async (tx) => {
     const [c] = await tx.select().from(schema.kase).where(and(eq(schema.kase.id, caseId), eq(schema.kase.tenantId, tenantId))).for('update');
     if (!c) throw new HttpError(404, 'ไม่พบเคส');

@@ -8,6 +8,8 @@ import type { SessionUser } from '@/server/lib/auth';
 import { OPEN_STATUSES, maskPhone } from '@/server/lib/enums';
 import { signedFileUrl } from '@/server/lib/storage';
 import { HttpError } from '@/server/lib/auth';
+import { assertUuid } from '@/server/admin/ids';
+import { auditView } from '@/server/lib/audit';
 
 export type InboxTab = 'mine' | 'team' | 'unassigned' | 'all';
 export interface InboxFilters {
@@ -48,7 +50,8 @@ function visibility(u: SessionUser): SQL | undefined {
   if (u.role !== 'agent') return undefined;
   return or(
     eq(schema.kase.assigneeId, u.id),
-    and(isNull(schema.kase.assigneeId), u.teamId ? or(eq(schema.kase.teamId, u.teamId), isNull(schema.kase.teamId)) : undefined),
+    // Must mirror canView() exactly (#14 L6): an agent without a team only sees team-less unassigned cases.
+    and(isNull(schema.kase.assigneeId), u.teamId ? or(eq(schema.kase.teamId, u.teamId), isNull(schema.kase.teamId)) : isNull(schema.kase.teamId)),
   );
 }
 
@@ -77,7 +80,11 @@ async function lookups(tenantId: string) {
   return { cats, users, pol, hours, catPath };
 }
 
-export async function listCases(u: SessionUser, f: InboxFilters, now = new Date()) {
+const isUuid = (v?: string) => !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
+export async function listCases(u: SessionUser, filters: InboxFilters, now = new Date()) {
+  // Drop malformed ids from the URL instead of failing with a Postgres cast error (#14 L4)
+  const f = { ...filters, categoryId: isUuid(filters.categoryId) ? filters.categoryId : undefined, assigneeId: isUuid(filters.assigneeId) ? filters.assigneeId : undefined };
   const tab = f.tab && tabsFor(u).includes(f.tab) ? f.tab : 'mine';
   const L = await lookups(u.tenantId);
   const conds: (SQL | undefined)[] = [eq(schema.kase.tenantId, u.tenantId), visibility(u), tabCondition(u, tab)];
@@ -154,19 +161,22 @@ export async function inboxUnreadCount(u: SessionUser) {
 // ── Case detail ───────────────────────────────────────────────
 
 export async function caseDetail(u: SessionUser, id: string, now = new Date()) {
+  assertUuid(id, 'ไม่พบเคส');
   const [c] = await db.select().from(schema.kase).where(and(eq(schema.kase.id, id), eq(schema.kase.tenantId, u.tenantId)));
   if (!c) throw new HttpError(404, 'ไม่พบเคส');
   if (!canView(u, c)) throw new HttpError(403, 'ไม่มีสิทธิ์ดูเคสนี้');
   const L = await lookups(u.tenantId);
 
   const [contact] = await db.select().from(schema.contact).where(eq(schema.contact.id, c.contactId));
+  await auditView({ tenantId: u.tenantId, actorId: u.id, action: 'case.viewed', entity: 'case', entityId: c.id });
   const [answers, messages, events, attachments, fv, contactCases] = await Promise.all([
     db.select().from(schema.caseAnswer).where(eq(schema.caseAnswer.caseId, c.id)).orderBy(asc(schema.caseAnswer.order)),
     db.select().from(schema.caseMessage).where(eq(schema.caseMessage.caseId, c.id)).orderBy(asc(schema.caseMessage.createdAt)),
     db.select().from(schema.caseEvent).where(eq(schema.caseEvent.caseId, c.id)).orderBy(asc(schema.caseEvent.createdAt)),
     db.select().from(schema.attachment).where(eq(schema.attachment.caseId, c.id)),
     c.formVersionId ? db.select({ version: schema.formVersion.version, name: schema.form.name }).from(schema.formVersion).innerJoin(schema.form, eq(schema.form.id, schema.formVersion.formId)).where(eq(schema.formVersion.id, c.formVersionId)) : Promise.resolve([]),
-    db.select({ id: schema.kase.id, caseNo: schema.kase.caseNo, title: schema.kase.title, status: schema.kase.status }).from(schema.kase).where(eq(schema.kase.contactId, c.contactId)).orderBy(desc(schema.kase.createdAt)),
+    db.select({ id: schema.kase.id, caseNo: schema.kase.caseNo, title: schema.kase.title, status: schema.kase.status, assigneeId: schema.kase.assigneeId, teamId: schema.kase.teamId })
+      .from(schema.kase).where(and(eq(schema.kase.tenantId, u.tenantId), eq(schema.kase.contactId, c.contactId))).orderBy(desc(schema.kase.createdAt)),
   ]);
   const policy = L.pol[c.priority];
   // "(ปรับ P3 → P2)" next to the answer whose priority rule raised the case (prototype CaseDetail.png)
@@ -204,7 +214,8 @@ export async function caseDetail(u: SessionUser, id: string, now = new Date()) {
       totalCases: contactCases.length,
       openCases: contactCases.filter((x) => OPEN_STATUSES.includes(x.status)).length,
     },
-    related: contactCases.filter((x) => x.id !== c.id).slice(0, 5),
+    // Only cases this user may see (#14 L1)
+    related: contactCases.filter((x) => x.id !== c.id && canView(u, x)).slice(0, 5).map(({ id, caseNo, title, status }) => ({ id, caseNo, title, status })),
     answers: answers.map((a) => ({
       key: a.questionKey, label: a.labelSnapshot, value: a.value,
       priorityNote: priorityRuleKeys.has(a.questionKey) ? priorityNote : null,

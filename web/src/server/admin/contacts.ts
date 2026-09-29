@@ -1,5 +1,6 @@
 /** Contacts (reporters). Phone is always masked in lists; full phone only via audited reveal (SPEC §8). */
 import { and, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { auditView } from '@/server/lib/audit';
 import { z } from 'zod';
 import { db, schema } from '@/server/db';
 import type { CaseStatus, Priority } from '@/server/db/schema';
@@ -94,6 +95,7 @@ export interface ContactCaseRow {
 /** Contact detail. Case history is filtered with the same rule as the case pages (`canView`). */
 export async function contactDetail(u: SessionUser, id: string) {
   const c = await getContact(u.tenantId, id);
+  await auditView({ tenantId: u.tenantId, actorId: u.id, action: 'contact.viewed', entity: 'contact', entityId: c.id });
   const rows = await db
     .select({ k: schema.kase, categoryName: schema.category.name, assigneeName: schema.user.name })
     .from(schema.kase)
