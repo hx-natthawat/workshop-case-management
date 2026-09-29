@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Case Detail CS-2609-00123</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0;font-family:"IBM Plex Sans Thai",system-ui,sans-serif;color:#1A1C1E;background:#F5F4F0}
+a{color:#0B6B5D;text-decoration:none}a:hover{color:#08584C}
+.nav{display:flex;align-items:center;gap:10px;height:36px;padding:0 12px;border-radius:8px;font-size:14px}
+.nav:hover{background:#EDEBE6}
+.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.lbl{font-size:12px;font-weight:600;color:#5A6066}
+.kv{display:flex;flex-direction:column;gap:2px;font-size:13.5px;line-height:1.45}
+.sel{height:36px;padding:0 10px;border:1px solid #D4D2CC;border-radius:8px;background:#FFFFFF;font:inherit;font-size:13.5px;width:100%}
+.fbtn{height:34px;padding:0 12px;border:1px solid #D4D2CC;border-radius:8px;background:#FFFFFF;font:inherit;font-size:13px;color:#1A1C1E;display:flex;align-items:center;gap:6px}
+.sys{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#5A6066}
+.sys:before{content:"";width:6px;height:6px;border-radius:50%;background:#8A8F94}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: flex; background: #F5F4F0; overflow: hidden">
+  <nav aria-label="เมนูหลัก" style="width: 232px; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; padding: 16px 12px; background: #FBFAF8; border-right: 1px solid #E2E0DA; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px 18px">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: #0B6B5D; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700">TM</div>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-size: 15px; font-weight: 600">Tools Management</span>
+        <span style="font-size: 11.5px; color: #5A6066">ศูนย์แจ้งปัญหา</span>
+      </div>
+    </div>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="10">
+      <a class="nav" href="{{n.href}}" style="{{n.style}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{n.d}}"></path></svg><span style="flex-grow: 1">{{n.label}}</span><sc-if value="{{n.badge}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; font-weight: 600; color: #B42318">{{n.badge}}</span></sc-if></a>
+    </sc-for>
+    <div style="flex-grow: 1"></div>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-top: 1px solid #E2E0DA">
+      <div style="width: 32px; height: 32px; border-radius: 50%; background: #3F4449; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">ธส</div>
+      <div style="display: flex; flex-direction: column"><span style="font-size: 13px; font-weight: 600">ธนพล ส.</span><span style="font-size: 12px; color: #5A6066">Supervisor · IT Service Desk</span></div>
+    </div>
+  </nav>
+
+  <main style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0">
+    <div style="display: flex; align-items: center; gap: 14px; padding: 16px 24px; background: #FFFFFF; border-bottom: 1px solid #E2E0DA">
+      <a href="Inbox.dc.html" aria-label="กลับไปกล่องเคส" style="width: 32px; height: 32px; border: 1px solid #D4D2CC; border-radius: 8px; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A1C1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></a>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span class="mono" style="font-size: 13px; color: #5A6066">CS-2609-00123</span>
+          <span class="chip" style="background: #FDF0E1; color: #B54708">P2 สูง</span>
+          <span class="chip" style="background: #FDF0E1; color: #B54708">รอข้อมูลผู้แจ้ง</span>
+        </div>
+        <h1 style="margin: 0; font-size: 20px; font-weight: 600">เข้าระบบ ERP ไม่ได้หลังเปลี่ยนรหัสผ่าน</h1>
+      </div>
+      <button class="fbtn">รวมกับเคสอื่น</button>
+      <button class="fbtn">มอบหมายต่อ</button>
+      <button class="fbtn" style="background: #17744A; border-color: #17744A; color: #FFFFFF; font-weight: 600">ทำเครื่องหมายว่าแก้ไขแล้ว</button>
+    </div>
+
+    <div style="flex-grow: 1; display: flex; min-height: 0">
+      <section aria-label="ข้อมูลจากแบบฟอร์ม" style="width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; padding: 20px; border-right: 1px solid #E2E0DA; box-sizing: border-box; overflow: hidden">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 600">คำตอบจากผู้แจ้ง</h2>
+        <span style="font-size: 12px; color: #5A6066">แบบฟอร์ม "เข้าระบบไม่ได้" version 3</span>
+        <div class="kv"><span class="lbl">หมวด</span><span>ระบบ IT › เข้าระบบไม่ได้</span></div>
+        <div class="kv"><span class="lbl">ระบบที่ใช้งานไม่ได้</span><span>ERP</span></div>
+        <div class="kv"><span class="lbl">ข้อความ error</span><span class="mono" style="font-size: 12.5px">Account is locked. Contact administrator.</span></div>
+        <div class="kv"><span class="lbl">ผลกระทบต่องาน</span><span>กระทบงานของทีม <span style="color: #5A6066">(ปรับ P3 → P2)</span></span></div>
+        <div class="kv"><span class="lbl">เริ่มพบปัญหา</span><span>29 ก.ย. 2569 · 09:10 น.</span></div>
+        <div class="kv"><span class="lbl">ไฟล์แนบ</span>
+          <div style="margin-top: 4px; width: 120px; height: 80px; border-radius: 8px; background: #F1F0EC; border: 1px solid #D4D2CC; display: flex; align-items: center; justify-content: center; font-size: 11.5px; color: #5A6066">[ภาพหน้าจอ]</div>
+        </div>
+      </section>
+
+      <section aria-label="ไทม์ไลน์" style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0; background: #F5F4F0">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; padding: 20px 28px; overflow: hidden">
+          <div class="sys">09:58 · สร้างเคสจาก LINE · มอบหมายอัตโนมัติให้ ธนพล ส. (กฎ: ระบบ IT · round-robin)</div>
+          <div style="display: flex; gap: 10px; max-width: 560px">
+            <div style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; background: #C6EFB5; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">สจ</div>
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <span style="font-size: 12px; color: #5A6066">สมชาย ใจดี · LINE · 09:57</span>
+              <div style="padding: 10px 14px; border-radius: 4px 14px 14px 14px; background: #FFFFFF; border: 1px solid #E2E0DA; font-size: 14px; line-height: 1.55">ส่งแบบฟอร์มแจ้งเคส 5 ข้อ พร้อมภาพหน้าจอ 1 รูป</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; max-width: 560px; align-self: flex-end; flex-direction: row-reverse">
+            <div style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; background: #3F4449; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">ธส</div>
+            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end">
+              <span style="font-size: 12px; color: #5A6066">ธนพล ส. · ส่งทาง LINE · 10:06 · อ่านแล้ว</span>
+              <div style="padding: 10px 14px; border-radius: 14px 4px 14px 14px; background: #E3F1EE; font-size: 14px; line-height: 1.55">สวัสดีครับคุณสมชาย รับเรื่องแล้วครับ กำลังตรวจสอบบัญชี ERP ให้ครับ</div>
+            </div>
+          </div>
+          <div class="sys">10:06 · ตอบรับครั้งแรกภายใน 8 นาที (SLA ตอบรับผ่าน)</div>
+          <div style="display: flex; gap: 10px; max-width: 560px; align-self: flex-end; flex-direction: row-reverse">
+            <div style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; background: #3F4449; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">ธส</div>
+            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end">
+              <span style="font-size: 12px; color: #5A6066">ธนพล ส. · บันทึกภายใน · 10:14</span>
+              <div style="padding: 10px 14px; border-radius: 14px 4px 14px 14px; background: #FFF6DB; border: 1px dashed #C9A227; font-size: 14px; line-height: 1.55">บัญชีถูกล็อกจากการใส่รหัสผิด 5 ครั้ง ปลดล็อกใน AD แล้ว รอ sync ประมาณ 10 นาที</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; max-width: 560px; align-self: flex-end; flex-direction: row-reverse">
+            <div style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; background: #3F4449; color: #FFFFFF; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center">ธส</div>
+            <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end">
+              <span style="font-size: 12px; color: #5A6066">ธนพล ส. · ส่งทาง LINE · 10:15 · อ่านแล้ว</span>
+              <div style="padding: 10px 14px; border-radius: 14px 4px 14px 14px; background: #E3F1EE; font-size: 14px; line-height: 1.55">ปลดล็อกบัญชีเรียบร้อยครับ รบกวนลองเข้าระบบอีกครั้งหลัง 10:25 น. แล้วแจ้งผลในแชทนี้ได้เลยครับ</div>
+            </div>
+          </div>
+          <div class="sys">10:15 · สถานะเปลี่ยนเป็น "รอข้อมูลผู้แจ้ง" · หยุดนับ SLA</div>
+        </div>
+
+        <div style="margin: 0 20px 20px; background: #FFFFFF; border: 1px solid #D4D2CC; border-radius: 12px; overflow: hidden">
+          <div role="tablist" style="display: flex; gap: 4px; padding: 8px 10px 0">
+            <sc-for list="{{modes}}" as="m" hint-placeholder-count="2">
+              <button role="tab" onClick="{{m.pick}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 8px; font: inherit; font-size: 13px; {{m.style}}">{{m.label}}</button>
+            </sc-for>
+          </div>
+          <label style="display: block; padding: 8px 14px"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden">ข้อความ</span><textarea placeholder="{{placeholder}}" style="width: 100%; height: 64px; border: 0; outline: none; resize: none; font: inherit; font-size: 14px; background: none; box-sizing: border-box"></textarea></label>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid #EEEDEA; background: {{barBg}}">
+            <button class="fbtn">ข้อความสำเร็จรูป</button>
+            <button class="fbtn" aria-label="แนบไฟล์"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1A1C1E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11l-8 8a5 5 0 0 1-7-7l8-8a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7-7"></path></svg></button>
+            <div style="flex-grow: 1"></div>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #3F4449">หลังส่ง<select class="sel" style="width: 170px; height: 34px"><option>คงสถานะเดิม</option><option>รอข้อมูลผู้แจ้ง</option><option>แก้ไขแล้ว</option></select></label>
+            <button style="height: 34px; padding: 0 16px; border: 0; border-radius: 8px; background: #0B6B5D; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">{{sendLabel}}</button>
+          </div>
+        </div>
+      </section>
+
+      <aside aria-label="การจัดการเคส" style="width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 18px; padding: 20px; background: #FFFFFF; border-left: 1px solid #E2E0DA; box-sizing: border-box; overflow: hidden">
+        <label style="display: flex; flex-direction: column; gap: 6px"><span class="lbl">สถานะ</span><select class="sel"><option>รอข้อมูลผู้แจ้ง</option><option>กำลังดำเนินการ</option><option>แก้ไขแล้ว</option></select></label>
+        <label style="display: flex; flex-direction: column; gap: 6px"><span class="lbl">Priority</span><select class="sel"><option>P2 สูง</option><option>P1 วิกฤต</option><option>P3 ปกติ</option><option>P4 ต่ำ</option></select></label>
+        <label style="display: flex; flex-direction: column; gap: 6px"><span class="lbl">ผู้รับผิดชอบ</span><select class="sel"><option>ธนพล ส. · IT Service Desk</option><option>กมลชนก ว.</option></select></label>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid #EEEDEA">
+          <span class="lbl">SLA</span>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; font-size: 13px"><span style="flex-grow: 1">ตอบรับ (1 ชม.)</span><span style="font-weight: 600; color: #17744A">ผ่าน · 8 นาที</span></div>
+            <div style="height: 6px; border-radius: 3px; background: #EEEDEA"><div style="width: 13%; height: 6px; border-radius: 3px; background: #17744A"></div></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; font-size: 13px"><span style="flex-grow: 1">แก้ไข (8 ชม. ทำการ)</span><span style="font-weight: 600; color: #5A6066">หยุดนับ</span></div>
+            <div style="height: 6px; border-radius: 3px; background: #EEEDEA"><div style="width: 4%; height: 6px; border-radius: 3px; background: #8A8F94"></div></div>
+            <span style="font-size: 12px; color: #5A6066">ใช้ไป 17 นาที · ครบกำหนด 17:58 น. หากไม่หยุดนับ</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid #EEEDEA">
+          <span class="lbl">ผู้แจ้ง</span>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: #C6EFB5; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">สจ</div>
+            <div style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 600">สมชาย ใจดี</span><span style="font-size: 12.5px; color: #5A6066">ฝ่ายบัญชี · ยินยอม PDPA v2</span></div>
+          </div>
+          <div style="display: flex; font-size: 13px"><span style="flex-grow: 1; color: #5A6066">โทรศัพท์</span><span>08x-xxx-4521 <a href="#" style="font-weight: 600">แสดง</a></span></div>
+          <div style="display: flex; font-size: 13px"><span style="flex-grow: 1; color: #5A6066">เคสทั้งหมด</span><span>6 เคส · เปิดอยู่ 2</span></div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid #EEEDEA">
+          <span class="lbl">เคสที่เกี่ยวข้อง</span>
+          <a href="#" style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid #E2E0DA; border-radius: 8px; color: #1A1C1E">
+            <span class="mono" style="font-size: 12.5px; color: #0B6B5D">CS-2609-00131</span>
+            <span style="font-size: 13px">เข้า VPN ไม่ได้ทั้งแผนกบัญชี</span>
+          </a>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+const NAV = [
+  ['แดชบอร์ด', 'Dashboard.dc.html', 'M4 13h6V4H4zM14 20h6v-9h-6zM14 4v4h6V4zM4 20h6v-4H4z'],
+  ['กล่องเคส', 'Inbox.dc.html', 'M4 13l2-8h12l2 8M4 13v6h16v-6M4 13h5l1 2h4l1-2h5', '2'],
+  ['ผู้ติดต่อ', '#', 'M16 19v-1a4 4 0 0 0-8 0v1M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],
+  ['Bot Flow', 'FlowBuilder.dc.html', 'M6 4v6M6 14v6M6 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM8 12h6l4-4M14 12l4 4'],
+  ['ข้อความสำเร็จรูป', '#', 'M5 5h14v10H9l-4 4z'],
+  ['FAQ', '#', 'M12 17h.01M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z'],
+  ['SLA และการมอบหมาย', '#', 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z'],
+  ['รายงาน', '#', 'M5 20V10M12 20V4M19 20v-7'],
+  ['ผู้ใช้และสิทธิ์', '#', 'M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M10 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM21 20v-1a4 4 0 0 0-3-3.9'],
+  ['ตั้งค่า', '#', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12h2M3 12h2M12 3v2M12 19v2M17 7l1.5-1.5M5.5 18.5L7 17M17 17l1.5 1.5M5.5 5.5L7 7']
+];
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { mode: 'line' }; }
+  renderVals() {
+    const active = 'Inbox.dc.html';
+    const nav = NAV.map(([label, href, d, badge]) => ({ label, href, d, badge: badge || '',
+      style: href === active ? 'background:#E3F1EE;color:#0B6B5D;font-weight:600' : 'color:#3F4449' }));
+    const line = this.state.mode === 'line';
+    const modes = [['line', 'ตอบผู้แจ้งทาง LINE'], ['note', 'บันทึกภายใน']].map(([id, label]) => ({
+      label, pick: () => this.setState({ mode: id }),
+      style: this.state.mode === id ? (id === 'line' ? 'background:#E3F1EE;color:#0B6B5D;font-weight:600' : 'background:#FFF6DB;color:#7A5B00;font-weight:600') : 'background:none;color:#5A6066'
+    }));
+    return {
+      nav, modes,
+      placeholder: line ? 'พิมพ์ข้อความถึงสมชาย ใจดี (ส่งเข้า LINE)' : 'บันทึกที่เห็นเฉพาะเจ้าหน้าที่',
+      sendLabel: line ? 'ส่งทาง LINE' : 'บันทึก',
+      barBg: line ? '#FBFAF8' : '#FFFBEB'
+    };
+  }
+}
+</script>
+</body>
+</html>

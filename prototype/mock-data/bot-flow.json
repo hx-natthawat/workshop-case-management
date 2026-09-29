@@ -1,0 +1,35 @@
+{
+  "_note": "Sample category tree and form used in the prototype (Bot Flow Builder + LINE screens). Shape follows SPEC.md §6 (category, form_version, question).",
+  "categories": [
+    { "name": "ระบบ IT", "children": ["เข้าระบบไม่ได้", "อีเมล", "VPN และเครือข่าย", "ขอสิทธิ์ใช้งาน", "ซอฟต์แวร์"], "hint": "เข้าระบบ · อีเมล · เครือข่าย · ขอสิทธิ์" },
+    { "name": "อุปกรณ์", "children": ["คอมพิวเตอร์", "เครื่องพิมพ์", "โทรศัพท์"], "hint": "คอมพิวเตอร์ · เครื่องพิมพ์ · โทรศัพท์" },
+    { "name": "อาคารสถานที่", "children": ["ปรับอากาศ", "ไฟฟ้า", "ประปา", "ห้องประชุม"] },
+    { "name": "สอบถามทั่วไป", "children": ["สอบถาม"] }
+  ],
+  "form": {
+    "name": "เข้าระบบไม่ได้",
+    "category": ["ระบบ IT", "เข้าระบบไม่ได้"],
+    "publishedVersion": 3,
+    "draftVersion": 4,
+    "defaultPriority": "P3",
+    "defaultTeam": "IT Service Desk",
+    "faqBeforeCase": [
+      { "title": "ลองวิธีนี้ก่อน", "body": "เข้าระบบไม่ได้หลังเปลี่ยนรหัสผ่าน ให้รอ 10 นาทีแล้วเข้าใหม่ หรือรีเซ็ตรหัสผ่านด้วยตนเองที่ลิงก์นี้", "actions": ["แก้ไขได้แล้ว", "ยังไม่ได้ ขอแจ้งเคส"] }
+    ],
+    "questions": [
+      { "order": 1, "key": "system_name", "type": "single_choice", "lineUi": "quick_reply", "label": "ระบบที่ใช้งานไม่ได้คือระบบใด", "required": true, "options": ["ERP", "อีเมล", "VPN", "ระบบอื่น"] },
+      { "order": 2, "key": "system_other", "type": "short_text", "lineUi": "chat_text", "label": "ระบุชื่อระบบ", "required": true, "validation": { "maxLength": 100 }, "showIf": { "key": "system_name", "equals": "ระบบอื่น" } },
+      { "order": 3, "key": "error_msg", "type": "long_text", "lineUi": "chat_text", "label": "ข้อความ error ที่พบ", "required": false, "skipLabel": "ข้าม" },
+      { "order": 4, "key": "impact", "type": "single_choice", "lineUi": "quick_reply", "label": "ปัญหานี้กระทบงานแค่ไหน", "required": true, "options": ["เฉพาะตัวเอง", "กระทบงานของทีม", "ทั้งหน่วยงานใช้งานไม่ได้"], "priorityRules": { "กระทบงานของทีม": "P2", "ทั้งหน่วยงานใช้งานไม่ได้": "P1" } },
+      { "order": 5, "key": "started_at", "type": "datetime", "lineUi": "datetime_picker", "label": "เริ่มพบปัญหาเมื่อไร", "required": true, "validation": { "notFuture": true }, "quickOptions": ["เลือกวันและเวลา", "เพิ่งเกิดเมื่อสักครู่"] },
+      { "order": 6, "key": "screenshot", "type": "attachment", "lineUi": "chat_media", "label": "แนบภาพหน้าจอ error", "required": false, "validation": { "maxFiles": 5, "maxFileMB": 10 }, "doneLabel": "เสร็จ", "skipLabel": "ข้าม" }
+    ],
+    "globalCommands": ["ย้อนกลับ", "เริ่มใหม่", "ยกเลิก", "คุยกับเจ้าหน้าที่"]
+  },
+  "richMenu": [
+    { "label": "แจ้งปัญหาใหม่", "action": "postback:start_case", "primary": true },
+    { "label": "ติดตามสถานะ", "action": "postback:track" },
+    { "label": "เคสของฉัน", "action": "postback:my_cases" },
+    { "label": "ติดต่อเจ้าหน้าที่", "action": "postback:handoff" }
+  ]
+}

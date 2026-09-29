@@ -1,0 +1,58 @@
+{
+  "_note": "Sample data used in the prototype (fictional). Current user: ธนพล ส. (Supervisor, IT Service Desk). 'Now' = 2026-09-29 10:45 +07:00.",
+  "cases": [
+    { "caseNo": "CS-2609-00131", "title": "เข้า VPN ไม่ได้ทั้งแผนกบัญชี", "category": ["ระบบ IT", "VPN"], "reporter": "สมชาย ใจดี", "priority": "P1", "status": "in_progress", "assignee": "ธนพล ส.", "slaState": "over", "slaText": "เกิน 12 นาที", "updatedAt": "2026-09-29T10:42:00+07:00", "unread": true },
+    { "caseNo": "CS-2609-00121", "title": "แอร์ห้องประชุม B ไม่เย็น", "category": ["อาคารสถานที่", "ปรับอากาศ"], "reporter": "ณัฐวุฒิ พ.", "priority": "P3", "status": "in_progress", "assignee": "อรรถพล ม.", "slaState": "warn", "slaText": "25 นาที", "updatedAt": "2026-09-29T09:40:00+07:00", "unread": false },
+    { "caseNo": "CS-2609-00118", "title": "อีเมลส่งออกภายนอกไม่ได้", "category": ["ระบบ IT", "อีเมล"], "reporter": "ศิริพร ท.", "priority": "P2", "status": "in_progress", "assignee": "กมลชนก ว.", "slaState": "warn", "slaText": "48 นาที", "updatedAt": "2026-09-29T09:12:00+07:00", "unread": false },
+    { "caseNo": "CS-2609-00129", "title": "เครื่องพิมพ์ชั้น 3 กระดาษติด", "category": ["อุปกรณ์", "เครื่องพิมพ์"], "reporter": "วราภรณ์ ก.", "priority": "P3", "status": "new", "assignee": null, "slaState": "ok", "slaText": "3 ชม. 40 นาที", "updatedAt": "2026-09-29T10:31:00+07:00", "unread": true },
+    { "caseNo": "CS-2609-00115", "title": "จอคอมพิวเตอร์กะพริบ", "category": ["อุปกรณ์", "คอมพิวเตอร์"], "reporter": "ชยพล อ.", "priority": "P3", "status": "assigned", "assignee": "ธนพล ส.", "slaState": "ok", "slaText": "5 ชม. 10 นาที", "updatedAt": "2026-09-29T08:47:00+07:00", "unread": false },
+    { "caseNo": "CS-2609-00127", "title": "ขอสิทธิ์เข้าระบบ ERP โมดูลจัดซื้อ", "category": ["ระบบ IT", "ขอสิทธิ์"], "reporter": "ปิยะ ร.", "priority": "P4", "status": "assigned", "assignee": "กมลชนก ว.", "slaState": "ok", "slaText": "1 วัน 2 ชม.", "updatedAt": "2026-09-29T10:05:00+07:00", "unread": false },
+    { "caseNo": "CS-2609-00104", "title": "ขอติดตั้งโปรแกรม Visio", "category": ["ระบบ IT", "ซอฟต์แวร์"], "reporter": "พรทิพย์ จ.", "priority": "P4", "status": "reopened", "assignee": "กมลชนก ว.", "slaState": "ok", "slaText": "2 วัน", "updatedAt": "2026-09-28T16:20:00+07:00", "unread": true },
+    { "caseNo": "CS-2609-00123", "title": "เข้าระบบ ERP ไม่ได้หลังเปลี่ยนรหัสผ่าน", "category": ["ระบบ IT", "เข้าระบบไม่ได้"], "reporter": "สมชาย ใจดี", "priority": "P2", "status": "pending_customer", "assignee": "ธนพล ส.", "slaState": "pause", "slaText": "หยุดนับ", "updatedAt": "2026-09-29T10:15:00+07:00", "unread": false },
+    { "caseNo": "CS-2609-00101", "title": "Wi-Fi ห้องอบรมหลุดบ่อย", "category": ["ระบบ IT", "เครือข่าย"], "reporter": "อนุชา ป.", "priority": "P2", "status": "resolved", "assignee": "ธนพล ส.", "slaState": "none", "slaText": "รอผู้แจ้งยืนยัน", "updatedAt": "2026-09-28T15:02:00+07:00", "unread": false },
+    { "caseNo": "CS-2609-00109", "title": "ไฟทางเดินชั้น 5 ดับ", "category": ["อาคารสถานที่", "ไฟฟ้า"], "reporter": "มาลี ส.", "priority": "P3", "status": "resolved", "assignee": "อรรถพล ม.", "slaState": "none", "slaText": "รอผู้แจ้งยืนยัน", "updatedAt": "2026-09-28T11:30:00+07:00", "unread": false }
+  ],
+  "caseDetail": {
+    "caseNo": "CS-2609-00123",
+    "formName": "เข้าระบบไม่ได้",
+    "formVersion": 3,
+    "contact": { "name": "สมชาย ใจดี", "department": "ฝ่ายบัญชี", "phoneMasked": "08x-xxx-4521", "consentVersion": "v2", "totalCases": 6, "openCases": 2 },
+    "answers": [
+      { "key": "system_name", "label": "ระบบที่ใช้งานไม่ได้", "value": "ERP" },
+      { "key": "error_msg", "label": "ข้อความ error", "value": "Account is locked. Contact administrator." },
+      { "key": "impact", "label": "ผลกระทบต่องาน", "value": "กระทบงานของทีม", "effect": "priority P3 -> P2" },
+      { "key": "started_at", "label": "เริ่มพบปัญหา", "value": "2026-09-29T09:10:00+07:00" },
+      { "key": "screenshot", "label": "ไฟล์แนบ", "value": ["screenshot-1.png"] }
+    ],
+    "sla": {
+      "response": { "limitMinutes": 60, "state": "met", "actualMinutes": 8 },
+      "resolve": { "limitMinutes": 480, "state": "paused", "usedMinutes": 17, "dueIfNotPaused": "2026-09-29T17:58:00+07:00" }
+    },
+    "timeline": [
+      { "type": "system", "at": "2026-09-29T09:58:00+07:00", "text": "สร้างเคสจาก LINE · มอบหมายอัตโนมัติให้ ธนพล ส. (กฎ: ระบบ IT · round-robin)" },
+      { "type": "inbound", "channel": "line", "at": "2026-09-29T09:57:00+07:00", "from": "สมชาย ใจดี", "text": "ส่งแบบฟอร์มแจ้งเคส 5 ข้อ พร้อมภาพหน้าจอ 1 รูป" },
+      { "type": "outbound", "channel": "line", "at": "2026-09-29T10:06:00+07:00", "from": "ธนพล ส.", "read": true, "text": "สวัสดีครับคุณสมชาย รับเรื่องแล้วครับ กำลังตรวจสอบบัญชี ERP ให้ครับ" },
+      { "type": "system", "at": "2026-09-29T10:06:00+07:00", "text": "ตอบรับครั้งแรกภายใน 8 นาที (SLA ตอบรับผ่าน)" },
+      { "type": "internal", "at": "2026-09-29T10:14:00+07:00", "from": "ธนพล ส.", "text": "บัญชีถูกล็อกจากการใส่รหัสผิด 5 ครั้ง ปลดล็อกใน AD แล้ว รอ sync ประมาณ 10 นาที" },
+      { "type": "outbound", "channel": "line", "at": "2026-09-29T10:15:00+07:00", "from": "ธนพล ส.", "read": true, "text": "ปลดล็อกบัญชีเรียบร้อยครับ รบกวนลองเข้าระบบอีกครั้งหลัง 10:25 น. แล้วแจ้งผลในแชทนี้ได้เลยครับ" },
+      { "type": "system", "at": "2026-09-29T10:15:00+07:00", "text": "สถานะเปลี่ยนเป็น \"รอข้อมูลผู้แจ้ง\" · หยุดนับ SLA" }
+    ],
+    "related": ["CS-2609-00131"]
+  },
+  "dashboard": {
+    "kpis": [
+      { "label": "เคสเปิดอยู่", "value": "48", "sub": "ใหม่วันนี้ 17 เคส" },
+      { "label": "ยังไม่มอบหมาย", "value": "7", "sub": "เก่าสุด 42 นาที" },
+      { "label": "ใกล้เกิน SLA", "value": "6", "sub": "ใช้เวลาเกิน 80%", "tone": "warning" },
+      { "label": "เกิน SLA", "value": "2", "sub": "P1 1 เคส · P2 1 เคส", "tone": "critical" },
+      { "label": "ผ่าน SLA · 30 วัน", "value": "92%", "sub": "เป้าหมาย 90%" },
+      { "label": "CSAT · 30 วัน", "value": "4.6", "sub": "จาก 5 · ตอบ 212 ครั้ง" }
+    ],
+    "newCasesDaily": [
+      ["2026-09-16", 21], ["2026-09-17", 18], ["2026-09-18", 24], ["2026-09-19", 19], ["2026-09-20", 15],
+      ["2026-09-21", 6], ["2026-09-22", 4], ["2026-09-23", 22], ["2026-09-24", 26], ["2026-09-25", 20],
+      ["2026-09-26", 23], ["2026-09-27", 18], ["2026-09-28", 5], ["2026-09-29", 17]
+    ],
+    "openByCategory": [["ระบบ IT", 21], ["อุปกรณ์", 14], ["อาคารสถานที่", 9], ["สอบถามทั่วไป", 4]]
+  }
+}
