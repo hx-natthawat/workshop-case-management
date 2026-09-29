@@ -9,7 +9,7 @@ import { PRIORITY } from '@/server/lib/enums';
 
 interface Sla { priority: Priority; responseMinutes: number; resolveMinutes: number; businessHoursOnly: boolean }
 interface Settings {
-  tenant: { oaName: string; bizStartMin: number; bizEndMin: number; pdpaText: string; pdpaVersion: string };
+  tenant: { oaName: string; bizStartMin: number; bizEndMin: number; pdpaText: string; pdpaVersion: string; slaTargetPct: number };
   sla: Sla[];
 }
 
@@ -30,6 +30,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
   const [pdpaText, setPdpaText] = useState(t0.pdpaText);
   const [pdpaVersion, setPdpaVersion] = useState(t0.pdpaVersion);
   const [sla, setSla] = useState<Sla[]>(initial.sla);
+  const [target, setTarget] = useState(t0.slaTargetPct);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -50,13 +51,14 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     if (toMin(end) !== t0.bizEndMin) body.bizEndMin = toMin(end);
     if (textChanged) body.pdpaText = pdpaText.trim();
     if (versionChanged) body.pdpaVersion = pdpaVersion.trim();
+    if (target !== t0.slaTargetPct) body.slaTargetPct = target;
     const changedSla = sla.filter((r) => {
       const o = initial.sla.find((x) => x.priority === r.priority);
       return !o || o.responseMinutes !== r.responseMinutes || o.resolveMinutes !== r.resolveMinutes || o.businessHoursOnly !== r.businessHoursOnly;
     });
     if (changedSla.length) body.sla = changedSla;
     if (!Object.keys(body).length) return setMsg({ ok: true, text: 'ไม่มีการเปลี่ยนแปลง' });
-    if (versionChanged && !confirm(`ผู้ที่ลงทะเบียนหลังจากนี้จะถูกบันทึกว่ายินยอมประกาศ PDPA version "${pdpaVersion.trim()}" ยืนยันการบันทึกหรือไม่`)) return;
+    if (versionChanged && !confirm(`ผู้ที่ลงทะเบียนหลังจากนี้จะถูกบันทึกว่ารับทราบประกาศ PDPA version "${pdpaVersion.trim()}" ยืนยันการบันทึกหรือไม่`)) return;
     setBusy(true);
     setMsg(null);
     const res = await fetch('/api/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -85,7 +87,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
           {(textChanged || versionChanged) && (
             <p className="flex items-start gap-2 rounded-md bg-warning-tint px-3 py-2 text-[13px] text-warning">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
-              ผู้ที่ลงทะเบียนใหม่หลังบันทึกจะถูกบันทึกว่ายินยอม version ใหม่ ผู้ที่ลงทะเบียนไว้แล้วยังคงบันทึก version เดิม
+              ผู้ที่ลงทะเบียนใหม่หลังบันทึกจะถูกบันทึกว่ารับทราบประกาศ version ใหม่ ผู้ที่ลงทะเบียนไว้แล้วยังคงบันทึก version เดิม
             </p>
           )}
         </div>
@@ -93,6 +95,11 @@ export function SettingsForm({ initial }: { initial: Settings }) {
 
       <div id="sla" className="scroll-mt-6" />
       <Card title="นโยบาย SLA">
+        <div className="max-w-[320px] px-5 pt-4">
+          <Field label="เป้าหมายอัตราผ่าน SLA (%)" htmlFor="s-target" hint="แสดงบนแดชบอร์ด ค่าเริ่มต้น 90% ยังไม่ยืนยันกับลูกค้า">
+            <Input id="s-target" type="number" min={50} max={100} value={target} onChange={(e) => setTarget(Number(e.target.value))} required />
+          </Field>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-[13.5px]">
             <thead>

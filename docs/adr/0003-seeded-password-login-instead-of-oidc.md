@@ -1,5 +1,5 @@
 # 0003. Email/password staff login for the MVP; OIDC later
-Date: 2026-09-29 · Status: Proposed · Deciders: Fero
+Date: 2026-09-29 · Status: Accepted (scope: MVP user test) · Deciders: PO (delegated by Fero), 2026-09-30, see DECISIONS D-002
 
 ## Context
 SPEC §2 names OIDC (Keycloak or Entra ID). SSO is Phase 2 (SPEC §9). Testers need to log in without an identity provider.

@@ -1,5 +1,5 @@
 # 0004. Attachments on local disk behind a storage interface, served by signed URL
-Date: 2026-09-29 · Status: Proposed · Deciders: Fero
+Date: 2026-09-29 · Status: Accepted (scope: MVP user test) · Deciders: PO (delegated by Fero), 2026-09-30, see DECISIONS D-002
 
 ## Context
 SPEC §2 uses S3-compatible storage. SPEC §8 requires attachments to be served through expiring signed URLs.

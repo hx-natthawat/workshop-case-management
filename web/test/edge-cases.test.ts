@@ -83,6 +83,19 @@ describe('edge cases (analysis §3)', () => {
     expect((await caseSvc.getCase(tenant.id, a.id)).status).toBe('pending_customer');
   });
 
+  it('asks which case when several cases are open, and labels agent replies with the case number (D-016, D-017)', async () => {
+    const r = await reporter();
+    const a = await caseFor(r.contact, 'เคสแรก');
+    const b = await caseFor(r.contact, 'เคสที่สอง');
+    await botSaid(r.id);
+    await send(say(r.id, 'สอบถามความคืบหน้าครับ'));
+    expect(await botSaid(r.id)).toContain('ต้องการส่งข้อความนี้ถึงเจ้าหน้าที่ของเคสใด');
+    await send(tap(r.id, `fwd:${a.id}`));
+    expect(await botSaid(r.id)).toContain(`ส่งข้อความถึงเจ้าหน้าที่ของเคส ${a.caseNo} แล้ว`);
+    await caseSvc.postAgentMessage(tenant.id, b.id, actor(), { mode: 'line', text: 'กำลังตรวจสอบครับ' });
+    expect(await botSaid(r.id)).toContain(`เคส ${b.caseNo}\\nกำลังตรวจสอบครับ`);
+  });
+
   it('skips Push and logs it when the reporter has unfollowed the OA', async () => {
     const r = await reporter();
     const c = await caseFor(r.contact, 'เคสผู้ใช้เลิกติดตาม');

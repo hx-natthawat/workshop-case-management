@@ -44,9 +44,13 @@ describe('businessMinutesBetween', () => {
 
 describe('raisePriority', () => {
   it('raises by at most one level', () => {
-    expect(raisePriority('P3', 'P1')).toBe('P2');
+    expect(raisePriority('P4', 'P2')).toBe('P3');
     expect(raisePriority('P3', 'P2')).toBe('P2');
     expect(raisePriority('P2', 'P1')).toBe('P1');
+  });
+  it('lets a P1 rule (organisation-wide impact) go straight to P1 (D-010)', () => {
+    expect(raisePriority('P3', 'P1')).toBe('P1');
+    expect(raisePriority('P4', 'P1')).toBe('P1');
   });
   it('never lowers', () => {
     expect(raisePriority('P2', 'P4')).toBe('P2');
@@ -73,6 +77,21 @@ describe('slaView', () => {
   it('warns at 80% of the response clock', () => {
     expect(slaView(base, P3, H, bkk('2026-09-29T12:20:00')).state).toBe('warn');
     expect(slaView(base, P3, H, bkk('2026-09-29T11:00:00')).state).toBe('ok');
+  });
+  it('does not breach a business-hour SLA outside office hours; the clock carries over (D-011)', () => {
+    const late = { ...base, slaResponseDue: bkk('2026-09-29T17:00:00') };
+    const evening = slaView(late, P3, H, bkk('2026-09-29T20:00:00'));
+    expect(evening.state).not.toBe('over');
+    expect(evening.remaining).toBe(0);
+    const nextMorning = slaView(late, P3, H, bkk('2026-09-30T09:20:00'));
+    expect(nextMorning.state).toBe('over');
+    expect(nextMorning.remaining).toBe(-20);
+  });
+  it('breaches P1 on the wall clock, 24/7', () => {
+    const P1: SlaPolicyLike = { priority: 'P1', responseMinutes: 15, resolveMinutes: 240, businessHoursOnly: false };
+    const v = slaView({ ...base, priority: 'P1', slaResponseDue: bkk('2026-10-03T23:00:00') }, P1, H, bkk('2026-10-03T23:10:00'));
+    expect(v.state).toBe('over');
+    expect(v.remaining).toBe(-10);
   });
   it('is over after the due date', () => {
     const v = slaView(base, P3, H, bkk('2026-09-29T13:12:00'));

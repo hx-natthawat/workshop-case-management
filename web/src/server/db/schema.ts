@@ -18,6 +18,8 @@ export const tenant = pgTable('tenant', {
   bizEndMin: integer('biz_end_min').notNull().default(17 * 60),
   /** Category used when a reporter asks for a human (analysis A4). */
   handoffCategoryId: uuid('handoff_category_id'),
+  /** Dashboard target for the 30-day SLA pass rate (D-013; default from the prototype, not from a standard). */
+  slaTargetPct: integer('sla_target_pct').notNull().default(90),
   createdAt: createdAt(),
 });
 

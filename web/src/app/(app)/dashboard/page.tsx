@@ -6,7 +6,8 @@ import { timeOnly } from '@/components/format';
 import { db, schema } from '@/server/db';
 import { formatMinutesTh, type SlaView } from '@/server/case/sla';
 import { requirePageUser } from '@/server/lib/auth';
-import { SLA_TARGET_PCT, dashboardData, resolveTeamScope } from '@/server/queries/dashboard';
+import { dashboardData, resolveTeamScope } from '@/server/queries/dashboard';
+import { defaultTenant } from '@/server/lib/tenant';
 import { listCases } from '@/server/queries/cases';
 import { TeamSelect } from './team-select';
 
@@ -43,6 +44,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const user = await requirePageUser();
   const sp = await searchParams;
   const now = new Date();
+  const tenant = await defaultTenant();
   const teams = await db.select({ id: schema.team.id, name: schema.team.name }).from(schema.team).where(eq(schema.team.tenantId, user.tenantId)).orderBy(asc(schema.team.createdAt));
   const teamParam = typeof sp.team === 'string' ? sp.team : undefined;
   const scopeTeamId = resolveTeamScope(user, teamParam, teams.map((t) => t.id));
@@ -86,7 +88,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <Kpi label="ยังไม่มอบหมาย" value={String(d.unassigned)} sub={d.oldestUnassignedMin != null ? `เก่าสุด ${formatMinutesTh(d.oldestUnassignedMin)}` : 'ไม่มีเคสค้าง'} />
         <Kpi label="ใกล้เกิน SLA" value={String(d.warn)} sub="ใช้เวลาเกิน 80%" tone="warning" />
         <Kpi label="เกิน SLA" value={String(d.over)} sub={d.overByPriority.length ? d.overByPriority.map((x) => `${x.priority} ${x.n} เคส`).join(' · ') : 'ไม่มีเคสเกิน SLA'} tone="critical" />
-        <Kpi label="ผ่าน SLA · 30 วัน" value={d.slaPassPct != null ? `${d.slaPassPct}%` : '-'} sub={`เป้าหมาย ${SLA_TARGET_PCT}%`} />
+        <Kpi label="ผ่าน SLA · 30 วัน" value={d.slaPassPct != null ? `${d.slaPassPct}%` : '-'} sub={`เป้าหมาย ${tenant.slaTargetPct}%`} />
         <Kpi label="CSAT · 30 วัน" value={d.csatAvg != null ? d.csatAvg.toFixed(1) : '-'} sub={`จาก 5 · ตอบ ${d.csatN} ครั้ง`} />
       </div>
 

@@ -1,5 +1,5 @@
 # 0002. Dialog session stored in Postgres with an expiry column
-Date: 2026-09-29 · Status: Proposed · Deciders: Fero
+Date: 2026-09-29 · Status: Accepted (scope: MVP user test) · Deciders: PO (delegated by Fero), 2026-09-30, see DECISIONS D-002
 
 ## Context
 SPEC §6 keeps the unfinished conversation in Redis with a 30-minute TTL. ADR 0001 removes Redis from the MVP.

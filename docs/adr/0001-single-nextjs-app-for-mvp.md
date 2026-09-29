@@ -1,5 +1,5 @@
 # 0001. Single Next.js app for the user-test MVP
-Date: 2026-09-29 · Status: Proposed · Deciders: Fero
+Date: 2026-09-29 · Status: Accepted (scope: MVP user test) · Deciders: PO (delegated by Fero), 2026-09-30, see DECISIONS D-002
 
 ## Context
 SPEC §2 proposes NestJS services, a Next.js web app, Redis + BullMQ and Keycloak. The goal right now is an MVP that real users can test, fast, on one machine.

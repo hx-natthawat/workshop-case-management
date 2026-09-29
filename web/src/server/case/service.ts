@@ -382,7 +382,8 @@ export async function postAgentMessage(
   }
 
   if (input.mode === 'line' || statusMessages.length) {
-    const agentMsg: LineMessage[] = input.mode === 'line' ? [agentReply(body, actor.user.name)] : [];
+    const openCount = input.mode === 'line' ? (await openCasesOf(tenantId, c.contactId)).length : 0;
+    const agentMsg: LineMessage[] = input.mode === 'line' ? [agentReply(body, actor.user.name, openCount > 1 ? c.caseNo : undefined)] : [];
     const r = await sendToReporter(tenantId, c, [...agentMsg, ...statusMessages]);
     if (!r.ok && input.mode === 'line') {
       await db.update(schema.caseMessage).set({ deliveryError: 'error' in r && r.error ? r.error : 'ส่งไม่สำเร็จ' }).where(eq(schema.caseMessage.id, msg.id));

@@ -265,6 +265,12 @@ async function bindToCase(tenant: Tenant, contact: Contact, content: MessageCont
     return [M.text(`ได้รับข้อมูลแล้วครับ ส่งต่อให้เจ้าหน้าที่ของเคส ${pending[0].caseNo} แล้ว`)];
   }
   const candidates = pending.length > 1 ? pending : open.filter((c) => c.status !== 'resolved');
+  // D-017: one open case active in the last 7 days → attach directly, like helpdesk LINE integrations
+  // that keep adding messages to the open ticket (docs/po/01-research-r1.md Q8).
+  if (pending.length === 0 && candidates.length === 1 && now.getTime() - candidates[0].updatedAt.getTime() <= 7 * 86_400_000) {
+    await caseSvc.addInbound(tenant.id, candidates[0], contact, content, lineMessageId, now);
+    return [M.text(`ส่งข้อความถึงเจ้าหน้าที่ของเคส ${candidates[0].caseNo} แล้วครับ\nหากเป็นเรื่องใหม่ กด "แจ้งปัญหาใหม่" ได้เลยครับ`, [M.pb(M.MENU_TEXT.start, 'menu:start'), M.pb(M.MENU_TEXT.myCases, 'menu:my_cases')])];
+  }
   if (!candidates.length) {
     return [M.text('สวัสดีครับ ต้องการแจ้งปัญหาใหม่ หรือดูเคสของคุณครับ', M.menuActions())];
   }

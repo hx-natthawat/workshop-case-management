@@ -95,7 +95,7 @@ const iconUrl = (icon: string, fg: string) => `${config.baseUrl()}/api/flex-icon
 export function welcome(oaName: string, registerUrl: string, displayName?: string | null): LineMessage[] {
   return [
     text(`สวัสดีครับ${displayName ? ` คุณ${displayName}` : ''} ยินดีต้อนรับสู่${oaName}`),
-    registerCard('ลงทะเบียนก่อนแจ้งปัญหา', 'กรอกชื่อ เบอร์โทร และรหัสลูกค้าเพียงครั้งเดียว พร้อมอ่านประกาศความเป็นส่วนตัวก่อนให้ความยินยอมครับ', registerUrl),
+    registerCard('ลงทะเบียนก่อนแจ้งปัญหา', 'กรอกชื่อ เบอร์โทร และรหัสลูกค้าเพียงครั้งเดียว พร้อมอ่านประกาศความเป็นส่วนตัวครับ', registerUrl),
   ];
 }
 
@@ -321,7 +321,11 @@ export function askScore(caseId: string): LineMessage {
   return text('ขอบคุณครับ ช่วยให้คะแนนความพึงพอใจกับการบริการครั้งนี้ด้วยครับ (1–5)', labels.map((l, i) => pb(l, `score:${caseId}:${i + 1}`, l)));
 }
 
-/** Agent reply as it appears in LINE: plain text with the agent's name as sender (LineTrack.png). */
-export function agentReply(body: string, agentName: string): LineMessage {
-  return text(body, [], { name: agentName.slice(0, 20) });
+/**
+ * Agent reply as it appears in LINE: plain text with the agent's name as sender (LineTrack.png).
+ * `sender.name` is capped at 20 characters, so when the reporter has several open cases the case
+ * number goes at the top of the text instead (D-016).
+ */
+export function agentReply(body: string, agentName: string, caseNo?: string): LineMessage {
+  return text(caseNo ? `เคส ${caseNo}\n${body}` : body, [], { name: agentName.slice(0, 20) });
 }

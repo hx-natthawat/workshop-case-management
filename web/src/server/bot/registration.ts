@@ -15,7 +15,8 @@ export const registrationSchema = z.object({
   phone: z.string().trim().transform((s) => s.replace(/[\s-]/g, '')).pipe(z.string().regex(/^0\d{8,9}$/, 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก ขึ้นต้นด้วย 0')),
   customerRef: z.string().trim().max(50).optional().default(''),
   orgUnit: z.string().trim().max(100).optional().default(''),
-  consent: z.literal(true, { error: 'ต้องยอมรับประกาศความเป็นส่วนตัวก่อนลงทะเบียน' }),
+  // D-014: acknowledgement of the privacy notice, not consent as a condition of service (PDPA s.19 para 4; basis s.24)
+  consent: z.literal(true, { error: 'กรุณายืนยันว่าได้อ่านประกาศความเป็นส่วนตัวแล้ว' }),
   consentVersion: z.string(),
 });
 export type RegistrationInput = z.input<typeof registrationSchema>;

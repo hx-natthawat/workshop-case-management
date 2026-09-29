@@ -85,12 +85,12 @@ describe('registration (R1)', () => {
   });
 
   it('rejects registration without consent', async () => {
-    await expect(registerContact(tenant, USER, { fullName: 'ทดสอบ ระบบ', phone: '0812345678', consent: false as unknown as true, consentVersion: 'v2' })).rejects.toThrow();
+    await expect(registerContact(tenant, USER, { fullName: 'ทดสอบ ระบบ', phone: '0812345678', consent: false as unknown as true, consentVersion: tenant.pdpaVersion })).rejects.toThrow();
   });
 
   it('stores consent version and time', async () => {
-    const c = await registerContact(tenant, USER, { fullName: 'ทดสอบ ระบบ', phone: '081-234-5678', customerRef: 'C-1', consent: true, consentVersion: 'v2' });
-    expect(c.consentVersion).toBe('v2');
+    const c = await registerContact(tenant, USER, { fullName: 'ทดสอบ ระบบ', phone: '081-234-5678', customerRef: 'C-1', consent: true, consentVersion: tenant.pdpaVersion });
+    expect(c.consentVersion).toBe(tenant.pdpaVersion);
     expect(c.consentAt).toBeInstanceOf(Date);
     expect(c.phone).toBe('0812345678');
     expect(flat(await botSaid())).toContain('ลงทะเบียนเรียบร้อยแล้ว');
@@ -214,20 +214,20 @@ describe('hand-off and my cases', () => {
     expect(flat(await botSaid())).toContain('ไม่พบเคส');
   });
 
-  it('asks which case a free-text message belongs to when cases are open', async () => {
-    await send(say('มีอัปเดตไหมครับ'));
-    const out = await botSaid();
-    expect(flat(out)).toContain('ต้องการส่งข้อความนี้ถึงเจ้าหน้าที่ของเคสใด');
+  it('sends free text straight to the only open case (D-017)', async () => {
     const c = await latestCase();
-    await send(tap(`fwd:${c.id}`));
+    await send(say('มีอัปเดตไหมครับ'));
     expect(flat(await botSaid())).toContain(`ส่งข้อความถึงเจ้าหน้าที่ของเคส ${c.caseNo} แล้ว`);
+    const inbound = await db.select().from(schema.caseMessage).where(and(eq(schema.caseMessage.caseId, c.id), eq(schema.caseMessage.direction, 'in')));
+    expect(inbound.some((m) => m.content.type === 'text' && m.content.text === 'มีอัปเดตไหมครับ')).toBe(true);
   });
 });
 
 describe('SLA worker (S2)', () => {
   it('flags a breach and notifies supervisors, then auto-closes a silent resolved case', async () => {
     const c = await latestCase();
-    await db.update(schema.kase).set({ slaResponseDue: new Date(Date.now() - 60_000), firstResponseAt: null }).where(eq(schema.kase.id, c.id));
+    // A week back always contains office time, whatever hour the test runs (D-011)
+    await db.update(schema.kase).set({ slaResponseDue: new Date(Date.now() - 7 * 86_400_000), firstResponseAt: null }).where(eq(schema.kase.id, c.id));
     await slaSweep();
     const after = await caseSvc.getCase(tenant.id, c.id);
     expect(after.slaBreachedResponse).toBe(true);

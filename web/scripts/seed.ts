@@ -13,13 +13,12 @@ import type { SessionUser } from '../src/server/lib/auth';
 
 const PASSWORD = process.env.SEED_PASSWORD ?? 'demo1234';
 const WITH_SAMPLES = process.env.SEED_SAMPLES !== 'false';
-const PDPA_TEXT = `ประกาศความเป็นส่วนตัว (ฉบับ v2)
-ศูนย์แจ้งปัญหาเก็บชื่อ เบอร์โทรศัพท์ รหัสลูกค้าหรือหน่วยงาน LINE user ID ข้อความ และไฟล์ที่คุณส่ง เพื่อวัตถุประสงค์ต่อไปนี้
-1. รับเรื่อง ติดตาม และแก้ไขปัญหาที่คุณแจ้ง
-2. ติดต่อกลับเกี่ยวกับเรื่องที่แจ้ง
-3. วัดคุณภาพบริการและความพึงพอใจ
-ข้อมูลจะเข้าถึงได้เฉพาะเจ้าหน้าที่ที่เกี่ยวข้อง คุณขอสำเนา แก้ไข ลบ หรือถอนความยินยอมได้โดยพิมพ์ "คุยกับเจ้าหน้าที่" ในแชท
-(ข้อความนี้เป็นตัวอย่างสำหรับการทดสอบ ต้องให้ฝ่ายกฎหมายตรวจก่อนใช้งานจริง)`;
+const PDPA_TEXT = `ประกาศความเป็นส่วนตัว (ฉบับ v3 · ตัวอย่างสำหรับการทดสอบ ต้องให้ฝ่ายกฎหมายตรวจก่อนใช้งานจริง)
+ข้อมูลที่เก็บ: ชื่อ เบอร์โทรศัพท์ รหัสลูกค้าหรือหน่วยงาน LINE user ID ข้อความ และไฟล์ที่คุณส่ง
+วัตถุประสงค์และฐานทางกฎหมาย: รับเรื่อง ติดต่อกลับ และแก้ไขปัญหาที่คุณแจ้ง เพื่อให้บริการตามที่คุณร้องขอ (พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล มาตรา 24) และวัดคุณภาพบริการเพื่อประโยชน์โดยชอบด้วยกฎหมาย
+ระยะเวลาเก็บ: ตลอดช่วงที่เคสยังเปิดอยู่ และเก็บต่อไม่เกิน [กำหนดโดยองค์กร] หลังปิดเคส จากนั้นลบหรือทำให้ไม่สามารถระบุตัวตนได้
+ผู้เข้าถึง: เฉพาะเจ้าหน้าที่ที่เกี่ยวข้องกับเคส
+สิทธิของคุณ: ขอเข้าถึงและขอสำเนา · แก้ไข · ลบ · ระงับการใช้ · คัดค้าน · ขอให้โอนย้ายข้อมูล โดยพิมพ์ "คุยกับเจ้าหน้าที่" ในแชท และร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคลได้`;
 
 type Q = { key: string; type: QuestionType; label: string; short?: string; required?: boolean; options?: string[]; validation?: object; showIf?: { key: string; equals: string }; priorityRules?: Record<string, Priority> };
 
@@ -99,7 +98,7 @@ const CANNED = [
 ];
 
 async function main() {
-  const [tenant] = await db.insert(schema.tenant).values({ name: 'HarmonyX Demo', oaName: 'ศูนย์แจ้งปัญหา', pdpaVersion: 'v2', pdpaText: PDPA_TEXT }).returning();
+  const [tenant] = await db.insert(schema.tenant).values({ name: 'HarmonyX Demo', oaName: 'ศูนย์แจ้งปัญหา', pdpaVersion: 'v3', pdpaText: PDPA_TEXT }).returning();
   const tenantId = tenant.id;
 
   await db.insert(schema.slaPolicy).values([

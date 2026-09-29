@@ -54,7 +54,7 @@ export function addBusinessMinutes(start: Date, minutes: number, h: BusinessHour
 
 /** Business minutes from a to b. Negative when b is before a. */
 export function businessMinutesBetween(a: Date, b: Date, h: BusinessHours, businessOnly: boolean): number {
-  if (b < a) return -businessMinutesBetween(b, a, h, businessOnly);
+  if (b < a) return -businessMinutesBetween(b, a, h, businessOnly) || 0; // avoid -0
   if (!businessOnly) return Math.floor((b.getTime() - a.getTime()) / MIN_MS);
   const end = toLocalMin(b);
   let m = alignToBusiness(toLocalMin(a), h);

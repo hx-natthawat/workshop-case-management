@@ -1,5 +1,5 @@
 # 0005. Reply-first messaging with Push fallback, behind one gateway
-Date: 2026-09-29 · Status: Proposed · Deciders: Fero
+Date: 2026-09-29 · Status: Accepted (scope: MVP user test) · Deciders: PO (delegated by Fero), 2026-09-30, see DECISIONS D-002
 
 ## Context
 Push messages count toward the LINE OA plan quota; Reply messages do not (SPEC §8, see 01-research). Testers also use a simulator with no LINE account.

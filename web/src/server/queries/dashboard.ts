@@ -42,8 +42,6 @@ export interface DashboardData {
   scopeIds: Set<string>;
 }
 
-/** Default SLA pass-rate target shown on the KPI tile (not configurable in the MVP). */
-export const SLA_TARGET_PCT = 90;
 
 /**
  * Team scope for the dashboard. Supervisors/admins may pick any team (`?team=<id>`) or

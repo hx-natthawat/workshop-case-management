@@ -164,7 +164,7 @@ export function RegisterForm({ oaName, pdpaText, pdpaVersion, simUserId, simRequ
               aria-describedby={errors.consent ? 'consent-err' : undefined}
               className="mt-0.5 size-5 shrink-0 accent-accent"
             />
-            <span className="text-[14px]">ข้าพเจ้าได้อ่านและยินยอมให้เก็บและใช้ข้อมูลตามประกาศความเป็นส่วนตัว ฉบับ {pdpaVersion}</span>
+            <span className="text-[14px]">ข้าพเจ้าได้อ่านและรับทราบประกาศความเป็นส่วนตัว ฉบับ {pdpaVersion}</span>
           </label>
           {errors.consent && <p id="consent-err" className="text-[13px] text-critical">{errors.consent}</p>}
         </section>

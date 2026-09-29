@@ -13,6 +13,9 @@ export const PRIORITY_ORDER: Priority[] = ['P1', 'P2', 'P3', 'P4'];
 /** SPEC §4: the impact answer can raise the category priority by at most one level. */
 export function raisePriority(base: Priority, requested: Priority | undefined): Priority {
   if (!requested) return base;
+  // D-010: an answer the admin mapped to P1 (organisation-wide impact) goes straight to P1,
+  // as in impact x urgency matrices (docs/po/01-research-r1.md Q1).
+  if (requested === 'P1') return 'P1';
   const b = PRIORITY_ORDER.indexOf(base);
   const r = PRIORITY_ORDER.indexOf(requested);
   if (r >= b) return base;
@@ -27,12 +30,12 @@ export function computeDues(createdAt: Date, policy: SlaPolicyLike, h: BusinessH
 }
 
 /**
- * Remaining minutes until `due`, measured on the SLA clock.
- * Once past the due time it is overdue by wall-clock minutes (a due time is absolute),
- * so a case due at 17:00 is already late at 17:05 even though office hours ended.
+ * Remaining minutes until `due`, measured on the SLA clock (negative when overdue).
+ * D-011: business-hour SLAs only count office time, so a target that runs out at 17:00 is not
+ * breached until office time passes the next working day (Zendesk / Freshdesk / JSM behave the same,
+ * docs/po/01-research-r1.md Q2). P1 (24/7) is measured on the wall clock.
  */
 export function remainingMinutes(now: Date, due: Date, policy: SlaPolicyLike, h: BusinessHours) {
-  if (now.getTime() > due.getTime()) return -Math.max(1, Math.round((now.getTime() - due.getTime()) / 60_000));
   return businessMinutesBetween(now, due, h, policy.businessHoursOnly);
 }
 
