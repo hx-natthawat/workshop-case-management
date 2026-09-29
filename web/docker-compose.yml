@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: casemgmt
+      POSTGRES_PASSWORD: casemgmt
+      POSTGRES_DB: casemgmt
+    ports:
+      - "54329:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U casemgmt"]
+      interval: 2s
+      retries: 20
+volumes:
+  pgdata:

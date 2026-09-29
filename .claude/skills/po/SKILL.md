@@ -54,6 +54,8 @@ States: `todo` · `in progress` · `awaiting approval` · `done` · `reopened`.
 
 ## Working rules
 
+0. **Every assignment becomes a task on the project board first.** Before assigning any work (to a subagent, to the main session, or to a person), create a GitHub issue in `hx-natthawat/workshop-case-management` with label `po-task`, add it to the project https://github.com/users/hx-natthawat/projects/2 (linked to the repo), and set Status (Todo · In Progress · Done). The issue body states: stage, assignee, goal, scope, files, and acceptance criteria as checkboxes. Move the Status as the work progresses, and put the issue URL in the agent prompt and in STATUS.md.
+
 1. **Stop at every gate.** At the end of a stage, summarise the result in at most 8 lines: what was produced, key decisions, and what needs the user's approval. Set the stage to `awaiting approval` and stop. Move on only after the user says yes. Exception: if the user said to "run through" several stages, keep going and batch the approvals at the end, but never start stage 7 Build without explicit approval of stages 3–6.
 2. **Artifacts, not chat.** Findings go in the stage file. Chat gets the summary and a link to the file.
 3. **Language.** Business-facing docs (SPEC.md, analysis, feedback) are written in Thai to match SPEC.md, using the `thai-professional-writing` skill. ADRs, design contracts, code, identifiers and commit messages are in English. Domain terms stay consistent with SPEC.md (e.g. `pending_customer`, `case_event`).
