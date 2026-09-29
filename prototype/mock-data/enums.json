@@ -1,0 +1,33 @@
+{
+  "caseStatus": [
+    { "code": "new", "label": "ใหม่", "tone": "info" },
+    { "code": "assigned", "label": "รับเรื่อง", "tone": "neutral" },
+    { "code": "in_progress", "label": "กำลังดำเนินการ", "tone": "accent" },
+    { "code": "pending_customer", "label": "รอข้อมูลผู้แจ้ง", "tone": "warning", "pausesSla": true },
+    { "code": "resolved", "label": "แก้ไขแล้ว", "tone": "success" },
+    { "code": "closed", "label": "ปิด", "tone": "neutral" },
+    { "code": "reopened", "label": "เปิดใหม่", "tone": "critical" },
+    { "code": "cancelled", "label": "ยกเลิก", "tone": "neutral" }
+  ],
+  "priority": [
+    { "code": "P1", "label": "วิกฤต", "tone": "critical", "responseMinutes": 15, "resolveMinutes": 240, "businessHoursOnly": false },
+    { "code": "P2", "label": "สูง", "tone": "warning", "responseMinutes": 60, "resolveMinutes": 480, "businessHoursOnly": true },
+    { "code": "P3", "label": "ปกติ", "tone": "info", "responseMinutes": 240, "resolveMinutes": 1440, "businessHoursOnly": true, "note": "resolve = 3 วันทำการ (8 ชม./วัน)" },
+    { "code": "P4", "label": "ต่ำ", "tone": "neutral", "responseMinutes": 480, "resolveMinutes": 2400, "businessHoursOnly": true, "note": "response = 1 วันทำการ, resolve = 5 วันทำการ" }
+  ],
+  "slaDisplay": {
+    "over": "เกินกำหนด: critical text + row tint --color-critical-row",
+    "warn": "ใช้เวลา >= 80%: warning text",
+    "ok": "ปกติ: secondary text",
+    "pause": "หยุดนับ (pending_customer): muted text, weight 500",
+    "none": "resolved: แสดง 'รอผู้แจ้งยืนยัน' สี disabled"
+  },
+  "toneTokens": {
+    "info": ["--color-info-tint", "--color-info"],
+    "neutral": ["--color-neutral-tint", "--color-neutral"],
+    "accent": ["--color-accent-tint", "--color-accent"],
+    "warning": ["--color-warning-tint", "--color-warning"],
+    "success": ["--color-success-tint", "--color-success"],
+    "critical": ["--color-critical-tint", "--color-critical"]
+  }
+}
